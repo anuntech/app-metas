@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
 import { getAllMetasController, addNewMetaController } from '@/lib/Controllers/Meta.controller';
 
-export async function GET() {
+// Handle requests to the base endpoint
+export async function GET(request) {
   try {
+    // Check if the user might be trying to use search with a typo in the URL
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const lastPathPart = pathParts[pathParts.length - 1];
+    
+    // If the path looks like a mistyped "search"
+    if (lastPathPart.includes('sear') || lastPathPart.includes('serch') || lastPathPart.includes('srch')) {
+      return NextResponse.json({ 
+        message: `Did you mean to use "/api/metas/search" instead of "${url.pathname}"?`,
+        suggestedUrl: `${url.origin}/api/metas/search${url.search}`
+      }, { status: 400 });
+    }
+    
     const result = await getAllMetasController();
     
     if (result.status === 200) {

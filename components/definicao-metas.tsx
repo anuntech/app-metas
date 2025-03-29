@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -9,44 +9,92 @@ import { Pencil, Trash2 } from "lucide-react"
 import { AddMetaForm } from "./add-meta-form"
 import { PageHeader } from "@/components/ui/page-header"
 
+// Define the Meta type to fix TypeScript errors
+type Meta = {
+  _id: string;
+  mes: string;
+  ano: number;
+  unidade: string;
+  faturamento: number;
+  funcionarios: number;
+  despesa: number;
+  inadimplencia: number;
+  nivel: string;
+}
+
 export default function DefinicaoMetas() {
   const [open, setOpen] = useState(false)
   const currentYear = new Date().getFullYear()
   const [selectedYear, setSelectedYear] = useState(currentYear.toString())
-
+  const [metas, setMetas] = useState<Meta[]>([])
   // Sample data for the table
-  const metas = [
-    {
-      id: 1,
-      mes: "Janeiro",
-      unidade: "Caieiras",
-      faturamento: "R$ 120.000,00",
-      funcionarios: 25,
-      despesa: "35%",
-      inadimplencia: "5%",
-      nivel: "II",
-    },
-    {
-      id: 2,
-      mes: "Fevereiro",
-      unidade: "Franco da Rocha",
-      faturamento: "R$ 95.000,00",
-      funcionarios: 18,
-      despesa: "32%",
-      inadimplencia: "7%",
-      nivel: "III",
-    },
-    {
-      id: 3,
-      mes: "Março",
-      unidade: "Mairiporã",
-      faturamento: "R$ 110.000,00",
-      funcionarios: 22,
-      despesa: "30%",
-      inadimplencia: "4%",
-      nivel: "IV",
-    },
-  ]
+  // const metas = [
+  //   {
+  //     id: 1,
+  //     mes: "Janeiro",
+  //     unidade: "Caieiras",
+  //     faturamento: "R$ 120.000,00",
+  //     funcionarios: 25,
+  //     despesa: "35%",
+  //     inadimplencia: "5%",
+  //     nivel: "II",
+  //   },
+  //   {
+  //     id: 2,
+  //     mes: "Fevereiro",
+  //     unidade: "Franco da Rocha",
+  //     faturamento: "R$ 95.000,00",
+  //     funcionarios: 18,
+  //     despesa: "32%",
+  //     inadimplencia: "7%",
+  //     nivel: "III",
+  //   },
+  //   {
+  //     id: 3,
+  //     mes: "Março",
+  //     unidade: "Mairiporã",
+  //     faturamento: "R$ 110.000,00",
+  //     funcionarios: 22,
+  //     despesa: "30%",
+  //     inadimplencia: "4%",
+  //     nivel: "IV",
+  //   },
+  // ]
+
+  // Format currency values (BRL)
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', { 
+      style: 'currency', 
+      currency: 'BRL' 
+    }).format(value);
+  }
+
+  // Format percentage values
+  const formatPercentage = (value: number) => {
+    return `${value}%`;
+  }
+
+  useEffect(() => {
+    const fetchMetas = async () => {
+      try {
+        const response = await fetch(`/api/metas/search?ano=${selectedYear}`);
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        const data = await response.json();
+        setMetas(data); 
+      } catch (error) {
+        console.error('Failed to fetch metas:', error);
+        return [];
+      }
+    };
+
+    fetchMetas();    
+  }, [selectedYear]);
+
+  useEffect(() => {
+    console.log('metas:', metas);
+  }, [metas])
 
   return (
     <div>
@@ -90,13 +138,13 @@ export default function DefinicaoMetas() {
             </TableHeader>
             <TableBody>
               {metas.map((meta) => (
-                <TableRow key={meta.id}>
+                <TableRow key={meta._id}>
                   <TableCell>{meta.mes}</TableCell>
                   <TableCell>{meta.unidade}</TableCell>
-                  <TableCell>{meta.faturamento}</TableCell>
+                  <TableCell>{formatCurrency(meta.faturamento)}</TableCell>
                   <TableCell>{meta.funcionarios}</TableCell>
-                  <TableCell>{meta.despesa}</TableCell>
-                  <TableCell>{meta.inadimplencia}</TableCell>
+                  <TableCell>{formatPercentage(meta.despesa)}</TableCell>
+                  <TableCell>{formatPercentage(meta.inadimplencia)}</TableCell>
                   <TableCell>{meta.nivel}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
