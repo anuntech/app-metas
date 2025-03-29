@@ -27,39 +27,6 @@ export default function DefinicaoMetas() {
   const currentYear = new Date().getFullYear()
   const [selectedYear, setSelectedYear] = useState(currentYear.toString())
   const [metas, setMetas] = useState<Meta[]>([])
-  // Sample data for the table
-  // const metas = [
-  //   {
-  //     id: 1,
-  //     mes: "Janeiro",
-  //     unidade: "Caieiras",
-  //     faturamento: "R$ 120.000,00",
-  //     funcionarios: 25,
-  //     despesa: "35%",
-  //     inadimplencia: "5%",
-  //     nivel: "II",
-  //   },
-  //   {
-  //     id: 2,
-  //     mes: "Fevereiro",
-  //     unidade: "Franco da Rocha",
-  //     faturamento: "R$ 95.000,00",
-  //     funcionarios: 18,
-  //     despesa: "32%",
-  //     inadimplencia: "7%",
-  //     nivel: "III",
-  //   },
-  //   {
-  //     id: 3,
-  //     mes: "Março",
-  //     unidade: "Mairiporã",
-  //     faturamento: "R$ 110.000,00",
-  //     funcionarios: 22,
-  //     despesa: "30%",
-  //     inadimplencia: "4%",
-  //     nivel: "IV",
-  //   },
-  // ]
 
   // Format currency values (BRL)
   const formatCurrency = (value: number) => {
@@ -91,10 +58,6 @@ export default function DefinicaoMetas() {
 
     fetchMetas();    
   }, [selectedYear]);
-
-  useEffect(() => {
-    console.log('metas:', metas);
-  }, [metas])
 
   return (
     <div>
