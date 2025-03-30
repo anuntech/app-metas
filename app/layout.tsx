@@ -2,6 +2,7 @@ import type React from "react"
 import "@/app/globals.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
+import { MetasProvider } from "@/lib/context/MetasContext"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -18,14 +19,14 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          {children}
+          <MetasProvider>
+            {children}
+          </MetasProvider>
         </ThemeProvider>
       </body>
     </html>
   )
 }
-
-
 
 import './globals.css'
 

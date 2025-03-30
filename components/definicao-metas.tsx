@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -8,56 +8,39 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pencil, Trash2 } from "lucide-react"
 import { AddMetaForm } from "./add-meta-form"
 import { PageHeader } from "@/components/ui/page-header"
-
-// Define the Meta type to fix TypeScript errors
-type Meta = {
-  _id: string;
-  mes: string;
-  ano: number;
-  unidade: string;
-  faturamento: number;
-  funcionarios: number;
-  despesa: number;
-  inadimplencia: number;
-  nivel: string;
-}
+import { useMetasContext, Meta } from "@/lib/context/MetasContext"
 
 export default function DefinicaoMetas() {
   const [open, setOpen] = useState(false)
   const currentYear = new Date().getFullYear()
-  const [selectedYear, setSelectedYear] = useState(currentYear.toString())
-  const [metas, setMetas] = useState<Meta[]>([])
+  
+  // Use the context instead of local state and API calls
+  const { metas, loading, currentYear: contextYear, setCurrentYear, deleteMeta } = useMetasContext()
 
   // Format currency values (BRL)
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { 
-      style: 'currency', 
-      currency: 'BRL' 
-    }).format(value);
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value)
   }
 
   // Format percentage values
   const formatPercentage = (value: number) => {
-    return `${value}%`;
+    return `${value}%`
   }
 
-  useEffect(() => {
-    const fetchMetas = async () => {
+  // Handle delete button click
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
       try {
-        const response = await fetch(`/api/metas/search?ano=${selectedYear}`);
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status}`);
-        }
-        const data = await response.json();
-        setMetas(data); 
+        await deleteMeta(id);
       } catch (error) {
-        console.error('Failed to fetch metas:', error);
-        return [];
+        console.error("Failed to delete meta:", error);
+        alert("Erro ao excluir meta");
       }
-    };
-
-    fetchMetas();    
-  }, [selectedYear]);
+    }
+  }
 
   return (
     <div>
@@ -65,8 +48,16 @@ export default function DefinicaoMetas() {
 
       <div className="container mx-auto space-y-6 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div className="w-full sm:w-64">
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <div className="w-full sm:w-64 relative">
+            {loading && (
+              <div className="absolute right-10 top-1/2 transform -translate-y-1/2">
+                <div className="h-4 w-4 border-2 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+            <Select 
+              value={contextYear.toString()} 
+              onValueChange={(value) => setCurrentYear(parseInt(value))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o ano" />
               </SelectTrigger>
@@ -100,31 +91,79 @@ export default function DefinicaoMetas() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {metas.map((meta) => (
-                <TableRow key={meta._id}>
-                  <TableCell>{meta.mes}</TableCell>
-                  <TableCell>{meta.unidade}</TableCell>
-                  <TableCell>{formatCurrency(meta.faturamento)}</TableCell>
-                  <TableCell>{meta.funcionarios}</TableCell>
-                  <TableCell>{formatPercentage(meta.despesa)}</TableCell>
-                  <TableCell>{formatPercentage(meta.inadimplencia)}</TableCell>
-                  <TableCell>{meta.nivel}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-brand-blue hover:text-brand-darkBlue hover:bg-brand-yellow hover:bg-opacity-20"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-100">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {loading ? (
+                // Loading skeleton rows
+                Array(5)
+                  .fill(0)
+                  .map((_, index) => (
+                    <TableRow key={`skeleton-${index}`} className="animate-pulse">
+                      <TableCell>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-12 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                          <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              ) : metas.length > 0 ? (
+                metas.map((meta) => (
+                  <TableRow key={meta._id} className="transition-opacity duration-300 ease-in-out">
+                    <TableCell>{meta.mes}</TableCell>
+                    <TableCell>{meta.unidade}</TableCell>
+                    <TableCell>{formatCurrency(meta.faturamento)}</TableCell>
+                    <TableCell>{meta.funcionarios}</TableCell>
+                    <TableCell>{formatPercentage(meta.despesa)}</TableCell>
+                    <TableCell>{formatPercentage(meta.inadimplencia)}</TableCell>
+                    <TableCell>{meta.nivel}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-brand-blue hover:text-brand-darkBlue hover:bg-brand-yellow hover:bg-opacity-20"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                          onClick={() => handleDelete(meta._id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                    Nenhuma meta encontrada para o ano selecionado
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>
