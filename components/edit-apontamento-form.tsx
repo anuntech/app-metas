@@ -20,7 +20,6 @@ import { DateRange } from "react-day-picker"
 // Define a type for our form data
 type ApontamentoFormData = {
   periodo: string;
-  nivel: string;
   unidade: string;
   faturamento: string;
   recebimento: string;
@@ -51,14 +50,11 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
   // Use the context
   const { updateApontamento } = useApontamentosContext()
 
-  const niveis = ["I", "II", "III", "IV"]
-
   const unidades = ["Total", "Caieiras", "Francisco Morato", "Mairiporã", "SP - Perus", "Franco da Rocha"]
 
   // Initialize form state with the apontamento data
   const [formData, setFormData] = useState<ApontamentoFormData>({
     periodo: apontamento.periodo,
-    nivel: apontamento.nivel,
     unidade: apontamento.unidade,
     faturamento: formatCurrencyInput(apontamento.faturamento.toString()),
     recebimento: formatCurrencyInput(apontamento.recebimento.toString()),
@@ -219,8 +215,8 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
 
     try {
       // Validate required fields before submission
-      if (!formData.periodo || !formData.unidade || !formData.nivel) {
-        throw new Error("Preencha todos os campos obrigatórios: Período, Unidade e Nível");
+      if (!formData.periodo || !formData.unidade) {
+        throw new Error("Preencha todos os campos obrigatórios: Período e Unidade");
       }
       
       // Validate that dateRange has necessary values
@@ -244,14 +240,11 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
       const payload = {
         periodo: formData.periodo,
         unidade: formData.unidade,
-        nivel: formData.nivel,
-        // Parse numeric values from formatted strings
         faturamento: Number(formData.faturamento.replace(/\./g, '').replace(',', '.')) || 0,
         recebimento: Number(formData.recebimento.replace(/\./g, '').replace(',', '.')) || 0,
         despesa: Number(formData.despesa.replace(/\./g, '').replace(',', '.')) || 0,
         inadimplenciaPercentual: Number(formData.inadimplenciaPercentual.replace(/%/g, '').replace(',', '.')) || 0,
         inadimplenciaValor: Number(formData.inadimplenciaValor.replace(/\./g, '').replace(',', '.')) || 0,
-        // Add required fields for the API
         mes: monthName,
         ano: year,
         dataInicio: startDate.toISOString(),
@@ -304,25 +297,6 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
             />
           </PopoverContent>
         </Popover>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="nivel">Nível da meta</Label>
-        <Select
-          value={formData.nivel}
-          onValueChange={(value) => handleChange('nivel', value)}
-        >
-          <SelectTrigger id="nivel" className="text-sm">
-            <SelectValue placeholder="Selecione o nível" />
-          </SelectTrigger>
-          <SelectContent>
-            {niveis.map((nivel) => (
-              <SelectItem key={nivel} value={nivel}>
-                {nivel}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="space-y-1.5">

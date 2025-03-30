@@ -1,15 +1,69 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ProgressCard } from "./progress-card"
 import { UnitCard } from "./unit-card"
 import { PageHeader } from "@/components/ui/page-header"
+
+// Define types for API responses
+type SummaryData = {
+  faturamento: {
+    atual: number
+    meta: number
+    restante: number
+    progresso: number
+  }
+  faturamentoPorFuncionario: {
+    atual: number
+    meta: number
+    restante: number
+    progresso: number
+  }
+  despesa: {
+    atual: number
+    meta: number
+    restante: number
+    progresso: number
+    valorReais: number
+  }
+  inadimplencia: {
+    atual: number
+    meta: number
+    restante: number
+    progresso: number
+    valorReais: number
+  }
+  totalFuncionarios: number
+}
+
+type UnitData = {
+  nome: string
+  faturamento: {
+    atual: number
+    meta: number
+    progresso: number
+  }
+  despesa: {
+    atual: number
+    meta: number
+    progresso: number
+    valorReais: number
+    isNegative: boolean
+  }
+  inadimplencia: {
+    atual: number
+    meta: number
+    progresso: number
+    valorReais: number
+    isNegative: boolean
+  }
+}
 
 export default function PainelResultados() {
   const [dateRange, setDateRange] = useState<{
@@ -19,141 +73,63 @@ export default function PainelResultados() {
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
   })
+  
+  const [loading, setLoading] = useState(false)
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null)
+  const [unitsData, setUnitsData] = useState<UnitData[]>([])
+  const [error, setError] = useState<string | null>(null)
 
-  // Sample data for the summary cards
-  const summaryData = {
-    faturamento: {
-      atual: 850000,
-      meta: 1000000,
-      restante: 150000,
-      progresso: 85,
-    },
-    faturamentoPorFuncionario: {
-      atual: 42500,
-      meta: 50000,
-      restante: 7500,
-      progresso: 85,
-    },
-    despesa: {
-      atual: 32,
-      meta: 30,
-      restante: -2,
-      progresso: 94, // Lower is better for expenses
-      valorReais: 272000,
-    },
-    inadimplencia: {
-      atual: 8,
-      meta: 5,
-      restante: -3,
-      progresso: 63, // Lower is better for default
-      valorReais: 68000,
-    },
+  // Function to fetch dashboard data
+  const fetchDashboardData = async () => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      // Format dates for API requests
+      const startDate = dateRange.from.toISOString()
+      const endDate = dateRange.to.toISOString()
+      
+      // Build query params
+      const queryParams = new URLSearchParams({ startDate, endDate })
+      
+      // Fetch summary data
+      const summaryResponse = await fetch(`/api/dashboard/summary?${queryParams}`)
+      
+      if (!summaryResponse.ok) {
+        const errorData = await summaryResponse.json()
+        throw new Error(errorData.message || 'Erro ao carregar dados do resumo')
+      }
+      
+      const summaryResult = await summaryResponse.json()
+      
+      // Fetch units data
+      const unitsResponse = await fetch(`/api/dashboard/units?${queryParams}`)
+      
+      if (!unitsResponse.ok) {
+        const errorData = await unitsResponse.json()
+        throw new Error(errorData.message || 'Erro ao carregar dados das unidades')
+      }
+      
+      const unitsResult = await unitsResponse.json()
+      
+      // Update state with fetched data
+      setSummaryData(summaryResult)
+      setUnitsData(unitsResult)
+      
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err)
+      setError(err instanceof Error ? err.message : 'Erro ao carregar dados')
+    } finally {
+      setLoading(false)
+    }
   }
+  
+  // Fetch data when date range changes
+  useEffect(() => {
+    fetchDashboardData()
+  }, [dateRange])
 
-  // Sample data for unit cards
-  const unidades = [
-    {
-      nome: "Caieiras",
-      faturamento: {
-        atual: 220000,
-        meta: 250000,
-        progresso: 88,
-      },
-      despesa: {
-        atual: 28,
-        meta: 30,
-        progresso: 93, // Lower is better
-        valorReais: 61600,
-      },
-      inadimplencia: {
-        atual: 6,
-        meta: 5,
-        progresso: 83, // Lower is better
-        valorReais: 13200,
-      },
-    },
-    {
-      nome: "Francisco Morato",
-      faturamento: {
-        atual: 180000,
-        meta: 200000,
-        progresso: 90,
-      },
-      despesa: {
-        atual: 31,
-        meta: 30,
-        progresso: 97, // Lower is better
-        valorReais: 55800,
-      },
-      inadimplencia: {
-        atual: 9,
-        meta: 5,
-        progresso: 56, // Lower is better
-        valorReais: 16200,
-      },
-    },
-    {
-      nome: "Mairiporã",
-      faturamento: {
-        atual: 195000,
-        meta: 220000,
-        progresso: 89,
-      },
-      despesa: {
-        atual: 29,
-        meta: 30,
-        progresso: 97, // Lower is better
-        valorReais: 56550,
-      },
-      inadimplencia: {
-        atual: 7,
-        meta: 5,
-        progresso: 71, // Lower is better
-        valorReais: 13650,
-      },
-    },
-    {
-      nome: "SP - Perus",
-      faturamento: {
-        atual: 155000,
-        meta: 180000,
-        progresso: 86,
-      },
-      despesa: {
-        atual: 33,
-        meta: 30,
-        progresso: 91, // Lower is better
-        valorReais: 51150,
-      },
-      inadimplencia: {
-        atual: 10,
-        meta: 5,
-        progresso: 50, // Lower is better
-        valorReais: 15500,
-      },
-    },
-    {
-      nome: "Franco da Rocha",
-      faturamento: {
-        atual: 100000,
-        meta: 150000,
-        progresso: 67,
-      },
-      despesa: {
-        atual: 35,
-        meta: 30,
-        progresso: 86, // Lower is better
-        valorReais: 35000,
-      },
-      inadimplencia: {
-        atual: 8,
-        meta: 5,
-        progresso: 63, // Lower is better
-        valorReais: 8000,
-      },
-    },
-  ]
-
+  // Format currency values (BRL)
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -161,6 +137,7 @@ export default function PainelResultados() {
     }).format(value)
   }
 
+  // Format period string (e.g., "1 a 31 de Janeiro")
   const formatPeriod = (from: Date, to: Date) => {
     if (from.getMonth() === to.getMonth()) {
       return `${format(from, "dd", { locale: ptBR })} a ${format(to, "dd", { locale: ptBR })} de ${format(from, "MMMM", { locale: ptBR })}`
@@ -198,7 +175,11 @@ export default function PainelResultados() {
                   mode="range"
                   defaultMonth={dateRange.from}
                   selected={dateRange}
-                  onSelect={setDateRange as any}
+                  onSelect={(range) => {
+                    if (range?.from && range?.to) {
+                      setDateRange({ from: range.from, to: range.to })
+                    }
+                  }}
                   numberOfMonths={1}
                   locale={ptBR}
                 />
@@ -206,82 +187,159 @@ export default function PainelResultados() {
             </Popover>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Faturamento Card */}
-            <ProgressCard
-              title="Faturamento"
-              value={formatCurrency(summaryData.faturamento.atual)}
-              target={formatCurrency(summaryData.faturamento.meta)}
-              progress={summaryData.faturamento.progresso}
-              remaining={`${formatCurrency(summaryData.faturamento.restante)} para a meta`}
-              isNegative={false}
-            />
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array(4).fill(0).map((_, index) => (
+                <div 
+                  key={`skeleton-${index}`} 
+                  className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 animate-pulse"
+                >
+                  <div className="space-y-3">
+                    <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+                    <div className="h-8 w-3/4 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 rounded"></div>
+                    <div className="h-3 w-3/4 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+              <p>Erro ao carregar dados: {error}</p>
+              <Button 
+                onClick={fetchDashboardData} 
+                variant="outline" 
+                className="mt-2"
+              >
+                Tentar novamente
+              </Button>
+            </div>
+          ) : summaryData ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Faturamento Card */}
+              <ProgressCard
+                title="Faturamento"
+                value={formatCurrency(summaryData.faturamento.atual)}
+                target={formatCurrency(summaryData.faturamento.meta)}
+                progress={summaryData.faturamento.progresso}
+                remaining={`${formatCurrency(summaryData.faturamento.restante)} para a meta`}
+                isNegative={false}
+              />
 
-            {/* Faturamento por funcionário Card */}
-            <ProgressCard
-              title="Faturamento por funcionário"
-              value={formatCurrency(summaryData.faturamentoPorFuncionario.atual)}
-              target={formatCurrency(summaryData.faturamentoPorFuncionario.meta)}
-              progress={summaryData.faturamentoPorFuncionario.progresso}
-              remaining={`${formatCurrency(summaryData.faturamentoPorFuncionario.restante)} para a meta`}
-              isNegative={false}
-            />
+              {/* Faturamento por funcionário Card */}
+              <ProgressCard
+                title="Faturamento por funcionário"
+                value={formatCurrency(summaryData.faturamentoPorFuncionario.atual)}
+                target={formatCurrency(summaryData.faturamentoPorFuncionario.meta)}
+                progress={summaryData.faturamentoPorFuncionario.progresso}
+                remaining={`${formatCurrency(summaryData.faturamentoPorFuncionario.restante)} para a meta`}
+                isNegative={false}
+              />
 
-            {/* Despesa Card */}
-            <ProgressCard
-              title="Despesa"
-              value={`${summaryData.despesa.atual}%`}
-              target={`Meta: ${summaryData.despesa.meta}%`}
-              progress={summaryData.despesa.progresso}
-              remaining={`${Math.abs(summaryData.despesa.restante)}% ${summaryData.despesa.restante < 0 ? "acima" : "abaixo"} da meta`}
-              secondaryText={formatCurrency(summaryData.despesa.valorReais)}
-              isNegative={summaryData.despesa.restante < 0}
-            />
+              {/* Despesa Card */}
+              <ProgressCard
+                title="Despesa"
+                value={`${summaryData.despesa.atual.toFixed(2)}%`}
+                target={`Meta: ${summaryData.despesa.meta.toFixed(2)}%`}
+                progress={summaryData.despesa.progresso}
+                remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.restante < 0 ? "acima" : "abaixo"} da meta`}
+                secondaryText={formatCurrency(summaryData.despesa.valorReais)}
+                isNegative={summaryData.despesa.restante < 0}
+              />
 
-            {/* Inadimplência Card */}
-            <ProgressCard
-              title="Inadimplência"
-              value={`${summaryData.inadimplencia.atual}%`}
-              target={`Meta: ${summaryData.inadimplencia.meta}%`}
-              progress={summaryData.inadimplencia.progresso}
-              remaining={`${Math.abs(summaryData.inadimplencia.restante)}% ${summaryData.inadimplencia.restante < 0 ? "acima" : "abaixo"} da meta`}
-              secondaryText={formatCurrency(summaryData.inadimplencia.valorReais)}
-              isNegative={summaryData.inadimplencia.restante < 0}
-            />
-          </div>
+              {/* Inadimplência Card */}
+              <ProgressCard
+                title="Inadimplência"
+                value={`${summaryData.inadimplencia.atual.toFixed(2)}%`}
+                target={`Meta: ${summaryData.inadimplencia.meta.toFixed(2)}%`}
+                progress={summaryData.inadimplencia.progresso}
+                remaining={`${Math.abs(summaryData.inadimplencia.restante).toFixed(2)}% ${summaryData.inadimplencia.restante > 0 ? "acima" : "abaixo"} da meta`}
+                secondaryText={formatCurrency(summaryData.inadimplencia.valorReais)}
+                isNegative={summaryData.inadimplencia.restante > 0}
+              />
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum dado disponível para o período selecionado
+            </div>
+          )}
         </div>
 
         {/* Units Section */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold">Unidades</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unidades.map((unidade, index) => (
-              <UnitCard
-                key={index}
-                name={unidade.nome}
-                faturamento={{
-                  atual: formatCurrency(unidade.faturamento.atual),
-                  meta: formatCurrency(unidade.faturamento.meta),
-                  progresso: unidade.faturamento.progresso,
-                }}
-                despesa={{
-                  atual: `${unidade.despesa.atual}%`,
-                  meta: `${unidade.despesa.meta}%`,
-                  progresso: unidade.despesa.progresso,
-                  valorReais: formatCurrency(unidade.despesa.valorReais),
-                  isNegative: unidade.despesa.atual > unidade.despesa.meta,
-                }}
-                inadimplencia={{
-                  atual: `${unidade.inadimplencia.atual}%`,
-                  meta: `${unidade.inadimplencia.meta}%`,
-                  progresso: unidade.inadimplencia.progresso,
-                  valorReais: formatCurrency(unidade.inadimplencia.valorReais),
-                  isNegative: unidade.inadimplencia.atual > unidade.inadimplencia.meta,
-                }}
-              />
-            ))}
+          <div>
+            <h2 className="text-2xl font-semibold">Unidades</h2>
+            <p className="text-muted-foreground">Período: {formatPeriod(dateRange.from, dateRange.to)}</p>
           </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array(6).fill(0).map((_, index) => (
+                <div 
+                  key={`unit-skeleton-${index}`} 
+                  className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 animate-pulse"
+                >
+                  <div className="space-y-4">
+                    <div className="h-5 w-1/3 bg-gray-200 rounded"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-full bg-gray-200 rounded"></div>
+                      <div className="h-3 w-full bg-gray-200 rounded"></div>
+                      <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-full bg-gray-200 rounded"></div>
+                      <div className="h-3 w-full bg-gray-200 rounded"></div>
+                      <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+              <p>Erro ao carregar dados: {error}</p>
+              <Button 
+                onClick={fetchDashboardData} 
+                variant="outline" 
+                className="mt-2"
+              >
+                Tentar novamente
+              </Button>
+            </div>
+          ) : unitsData.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {unitsData.map((unidade, index) => (
+                <UnitCard
+                  key={`${unidade.nome}-${index}`}
+                  name={unidade.nome}
+                  faturamento={{
+                    atual: formatCurrency(unidade.faturamento.atual),
+                    meta: formatCurrency(unidade.faturamento.meta),
+                    progresso: unidade.faturamento.progresso,
+                    isNegative: unidade.faturamento.progresso < 100
+                  }}
+                  despesa={{
+                    atual: `${unidade.despesa.atual.toFixed(2)}%`,
+                    meta: `${unidade.despesa.meta.toFixed(2)}%`,
+                    progresso: unidade.despesa.progresso,
+                    valorReais: formatCurrency(unidade.despesa.valorReais),
+                    isNegative: unidade.despesa.isNegative,
+                  }}
+                  inadimplencia={{
+                    atual: `${unidade.inadimplencia.atual.toFixed(2)}%`,
+                    meta: `${unidade.inadimplencia.meta.toFixed(2)}%`,
+                    progresso: unidade.inadimplencia.progresso,
+                    valorReais: formatCurrency(unidade.inadimplencia.valorReais),
+                    isNegative: unidade.inadimplencia.isNegative,
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhuma unidade encontrada para o período selecionado
+            </div>
+          )}
         </div>
       </div>
     </div>

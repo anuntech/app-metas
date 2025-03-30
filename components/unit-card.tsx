@@ -7,18 +7,20 @@ interface UnitCardProps {
     atual: string
     meta: string
     progresso: number
+    isNegative?: boolean
   }
   despesa: {
     atual: string
     meta: string
     progresso: number
+    valorReais?: string
     isNegative: boolean
   }
   inadimplencia: {
     atual: string
     meta: string
     progresso: number
-    valorReais: string
+    valorReais?: string
     isNegative: boolean
   }
 }
@@ -36,7 +38,11 @@ export function UnitCard({ name, faturamento, despesa, inadimplencia }: UnitCard
             <div className="text-sm font-medium">Faturamento</div>
             <div className="text-sm font-medium">{faturamento.atual}</div>
           </div>
-          <Progress value={faturamento.progresso} className="h-2 bg-gray-200" indicatorClassName="bg-brand-blue" />
+          <Progress 
+            value={faturamento.progresso} 
+            className="h-2 bg-gray-200" 
+            indicatorClassName={faturamento.isNegative ? "bg-red-500" : "bg-brand-blue"} 
+          />
           <div className="text-xs text-muted-foreground">Meta: {faturamento.meta}</div>
         </div>
 
