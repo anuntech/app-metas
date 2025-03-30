@@ -5,15 +5,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Loader2 } from "lucide-react"
 import { AddMetaForm } from "./add-meta-form"
 import { PageHeader } from "@/components/ui/page-header"
-import { useMetasContext, Meta } from "@/lib/context/MetasContext"
+import { useMetasContext } from "@/lib/context/MetasContext"
 
 export default function DefinicaoMetas() {
   const [open, setOpen] = useState(false)
   const currentYear = new Date().getFullYear()
-  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingMetaId, setDeletingMetaId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   // Use the context instead of local state and API calls
   const { metas, loading, currentYear: contextYear, setCurrentYear, deleteMeta } = useMetasContext()
 
@@ -31,14 +34,25 @@ export default function DefinicaoMetas() {
   }
 
   // Handle delete button click
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
-      try {
-        await deleteMeta(id);
-      } catch (error) {
-        console.error("Failed to delete meta:", error);
-        alert("Erro ao excluir meta");
-      }
+  const handleDelete = (id: string) => {
+    setDeletingMetaId(id)
+    setDeleteDialogOpen(true)
+  }
+
+  // Confirm deletion
+  const confirmDelete = async () => {
+    if (!deletingMetaId) return
+
+    setIsDeleting(true)
+    try {
+      await deleteMeta(deletingMetaId)
+      setDeleteDialogOpen(false)
+    } catch (error) {
+      console.error("Failed to delete meta:", error)
+      alert("Erro ao excluir meta")
+    } finally {
+      setIsDeleting(false)
+      setDeletingMetaId(null)
     }
   }
 
@@ -54,10 +68,7 @@ export default function DefinicaoMetas() {
                 <div className="h-4 w-4 border-2 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
               </div>
             )}
-            <Select 
-              value={contextYear.toString()} 
-              onValueChange={(value) => setCurrentYear(parseInt(value))}
-            >
+            <Select value={contextYear.toString()} onValueChange={(value) => setCurrentYear(Number.parseInt(value))}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o ano" />
               </SelectTrigger>
@@ -174,6 +185,39 @@ export default function DefinicaoMetas() {
               <DialogTitle>Adicionar meta</DialogTitle>
             </DialogHeader>
             <AddMetaForm onClose={() => setOpen(false)} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Confirmar exclusão</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>Tem certeza que deseja excluir esta meta?</p>
+              <p className="text-sm text-muted-foreground mt-2">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                className="bg-red-500 hover:bg-red-600 text-white"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  "Excluir"
+                )}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

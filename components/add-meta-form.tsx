@@ -62,11 +62,54 @@ export function AddMetaForm({ onClose }: { onClose: () => void }) {
     inadimplencia: ''
   });
 
-  // Handle input changes
+  // Format currency as user types (BRL)
+  const formatCurrencyInput = (value: string): string => {
+    // Remove non-digit characters
+    const digits = value.replace(/\D/g, '');
+    
+    if (!digits) return '';
+    
+    // Convert to number and format
+    const numberValue = parseInt(digits) / 100;
+    return numberValue.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+  
+  // Format percentage as user types
+  const formatPercentageInput = (value: string): string => {
+    // Remove percent sign and non-digit/non-decimal characters
+    const cleaned = value.replace(/[^\d.,]/g, '').replace(/,/g, '.');
+    
+    // Handle empty or invalid input
+    if (!cleaned) return '';
+    
+    // Only allow one decimal point
+    const parts = cleaned.split('.');
+    const formatted = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+    
+    // Add percent sign
+    return formatted + '%';
+  };
+
+  // Handle input changes with formatting
   const handleChange = (field: keyof MetaFormData, value: string) => {
+    let formattedValue = value;
+    
+    // Apply specific formatting based on field type
+    if (field === 'faturamento') {
+      formattedValue = formatCurrencyInput(value);
+    } else if (field === 'despesa' || field === 'inadimplencia') {
+      // Only format if not empty
+      if (value) {
+        formattedValue = formatPercentageInput(value);
+      }
+    }
+    
     setFormData({
       ...formData,
-      [field]: value
+      [field]: formattedValue
     });
   };
 
@@ -86,11 +129,11 @@ export function AddMetaForm({ onClose }: { onClose: () => void }) {
         ano: parseInt(formData.ano),
         unidade: formData.unidade,
         nivel: formData.nivel,
-        // Use Number() with fallbacks for numeric fields
+        // Parse numeric values from formatted strings
         faturamento: Number(formData.faturamento.replace(/\./g, '').replace(',', '.')) || 0,
         funcionarios: Number(formData.funcionarios) || 0,
-        despesa: Number(formData.despesa.replace('%', '').replace(',', '.')) || 0,
-        inadimplencia: Number(formData.inadimplencia.replace('%', '').replace(',', '.')) || 0
+        despesa: Number(formData.despesa.replace(/%/g, '').replace(',', '.')) || 0,
+        inadimplencia: Number(formData.inadimplencia.replace(/%/g, '').replace(',', '.')) || 0
       };
 
       // Use the context method instead of direct API call
