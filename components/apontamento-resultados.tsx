@@ -7,14 +7,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Pencil, Trash2, Loader2 } from "lucide-react"
 import { AddApontamentoForm } from "./add-apontamento-form"
+import { EditApontamentoForm } from "./edit-apontamento-form"
 import { PageHeader } from "@/components/ui/page-header"
 import { useApontamentosContext, ApontamentoType } from "@/lib/context/ApontamentosContext"
 
 export default function ApontamentoResultados() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedApontamentoId, setSelectedApontamentoId] = useState<string | null>(null)
+  const [selectedApontamento, setSelectedApontamento] = useState<typeof ApontamentoType | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   
   // Use the apontamentos context
   const { 
@@ -57,6 +61,14 @@ export default function ApontamentoResultados() {
   // Format percentage values
   const formatPercentage = (value: number) => {
     return `${value}%`
+  }
+
+  // Open edit dialog
+  const handleEdit = (apontamento: typeof ApontamentoType) => {
+    setSelectedApontamento(apontamento);
+    setSelectedApontamentoId(apontamento._id);
+    setIsEditing(true);
+    setEditDialogOpen(true);
   }
 
   // Open delete confirmation dialog
@@ -167,7 +179,7 @@ export default function ApontamentoResultados() {
                   <TableRow 
                     key={apontamento._id} 
                     className={`transition-all duration-300 ease-in-out ${
-                      selectedApontamentoId === apontamento._id && isDeleting
+                      selectedApontamentoId === apontamento._id && (isDeleting || isEditing)
                         ? "opacity-50 bg-red-50"
                         : ""
                     }`}
@@ -185,8 +197,14 @@ export default function ApontamentoResultados() {
                           variant="ghost"
                           size="icon"
                           className="text-brand-blue hover:text-brand-darkBlue hover:bg-brand-yellow hover:bg-opacity-20"
+                          onClick={() => handleEdit(apontamento)}
+                          disabled={isEditing && selectedApontamentoId === apontamento._id}
                         >
-                          <Pencil className="h-4 w-4" />
+                          {isEditing && selectedApontamentoId === apontamento._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Pencil className="h-4 w-4" />
+                          )}
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -223,6 +241,39 @@ export default function ApontamentoResultados() {
               <DialogTitle>Adicionar apontamento</DialogTitle>
             </DialogHeader>
             <AddApontamentoForm onClose={() => setAddDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Apontamento Dialog */}
+        <Dialog 
+          open={editDialogOpen} 
+          onOpenChange={(open) => {
+            // Always allow the dialog to close
+            setEditDialogOpen(open);
+            
+            // When closing, clear the selected apontamento and reset editing state
+            if (!open) {
+              setSelectedApontamento(null);
+              setSelectedApontamentoId(null);
+              setIsEditing(false);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Editar apontamento</DialogTitle>
+            </DialogHeader>
+            {selectedApontamento && (
+              <EditApontamentoForm 
+                apontamento={selectedApontamento} 
+                onClose={() => {
+                  setEditDialogOpen(false);
+                  setIsEditing(false);
+                  setSelectedApontamento(null);
+                  setSelectedApontamentoId(null);
+                }}
+              />
+            )}
           </DialogContent>
         </Dialog>
 

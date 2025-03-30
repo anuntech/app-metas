@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +14,7 @@ import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { useApontamentosContext } from "@/lib/context/ApontamentosContext"
+import { useApontamentosContext, ApontamentoType } from "@/lib/context/ApontamentosContext"
 import { DateRange } from "react-day-picker"
 
 // Define a type for our form data
@@ -29,37 +29,61 @@ type ApontamentoFormData = {
   inadimplenciaValor: string;
 };
 
-export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
-  const [loading, setLoading] = useState(false)
-  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+type EditApontamentoFormProps = {
+  apontamento: typeof ApontamentoType;
+  onClose: () => void;
+}
 
-  // Use the apontamentos context
-  const { addApontamento } = useApontamentosContext();
+export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFormProps) {
+  const [loading, setLoading] = useState(false)
+  
+  // For date picker
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (apontamento.dataInicio && apontamento.dataFim) {
+      return {
+        from: new Date(apontamento.dataInicio),
+        to: new Date(apontamento.dataFim)
+      };
+    }
+    return undefined;
+  })
+
+  // Use the context
+  const { updateApontamento } = useApontamentosContext()
 
   const niveis = ["I", "II", "III", "IV"]
 
   const unidades = ["Total", "Caieiras", "Francisco Morato", "Mairiporã", "SP - Perus", "Franco da Rocha"]
 
-  // Initialize form state
+  // Initialize form state with the apontamento data
   const [formData, setFormData] = useState<ApontamentoFormData>({
-    periodo: '',
-    nivel: '',
-    unidade: '',
-    faturamento: '',
-    recebimento: '',
-    despesa: '',
-    inadimplenciaPercentual: '',
-    inadimplenciaValor: '',
+    periodo: apontamento.periodo,
+    nivel: apontamento.nivel,
+    unidade: apontamento.unidade,
+    faturamento: formatCurrencyInput(apontamento.faturamento.toString()),
+    recebimento: formatCurrencyInput(apontamento.recebimento.toString()),
+    despesa: formatCurrencyInput(apontamento.despesa.toString()),
+    inadimplenciaPercentual: formatPercentageInput(apontamento.inadimplenciaPercentual.toString()),
+    inadimplenciaValor: formatCurrencyInput(apontamento.inadimplenciaValor.toString())
   });
 
   // Format currency as user types (BRL)
-  const formatCurrencyInput = (value: string): string => {
+  function formatCurrencyInput(value: string): string {
     // Remove non-digit characters
     const digits = value.replace(/\D/g, '');
     
     if (!digits) return '';
     
-    // Convert to number and format
+    // If this is a pre-filled value (without decimals)
+    if (value.indexOf('.') === -1 && !isNaN(Number(value))) {
+      const numberValue = Number(value);
+      return numberValue.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+    
+    // For user input (divide by 100 for decimal placement)
     const numberValue = parseInt(digits) / 100;
     return numberValue.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
@@ -68,7 +92,10 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
   };
   
   // Format percentage as user types
-  const formatPercentageInput = (value: string): string => {
+  function formatPercentageInput(value: string): string {
+    // If it already has %, just return the value
+    if (value.includes('%')) return value;
+    
     // Remove percent sign and non-digit/non-decimal characters
     const cleaned = value.replace(/[^\d.,]/g, '').replace(/,/g, '.');
     
@@ -231,17 +258,17 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
         dataFim: endDate.toISOString()
       };
 
-      // Use the context method for adding apontamento
-      await addApontamento(payload);
+      // Use the context method to update the apontamento
+      await updateApontamento(apontamento._id, payload);
       
-      console.log('Apontamento criado com sucesso');
+      console.log('Apontamento atualizado com sucesso');
       
       // Close the dialog after success
       onClose();
     } catch (error) {
       // Handle error (show error message to user)
-      console.error('Error creating apontamento:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao criar apontamento');
+      console.error('Error updating apontamento:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao atualizar apontamento');
     } finally {
       setLoading(false);
     }
@@ -391,11 +418,10 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
               Salvando...
             </>
           ) : (
-            "Salvar"
+            "Atualizar"
           )}
         </Button>
       </DialogFooter>
     </form>
   )
-}
-
+} 
