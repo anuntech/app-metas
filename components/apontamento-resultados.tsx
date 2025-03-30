@@ -3,15 +3,18 @@
 import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Loader2 } from "lucide-react"
 import { AddApontamentoForm } from "./add-apontamento-form"
 import { PageHeader } from "@/components/ui/page-header"
 import { useApontamentosContext, ApontamentoType } from "@/lib/context/ApontamentosContext"
 
 export default function ApontamentoResultados() {
-  const [open, setOpen] = useState(false)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedApontamentoId, setSelectedApontamentoId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   
   // Use the apontamentos context
   const { 
@@ -19,7 +22,8 @@ export default function ApontamentoResultados() {
     loading, 
     currentMonth, 
     setCurrentMonth,
-    initializeData
+    initializeData,
+    deleteApontamento
   } = useApontamentosContext();
 
   // Initialize data fetching when component mounts
@@ -55,6 +59,28 @@ export default function ApontamentoResultados() {
     return `${value}%`
   }
 
+  // Open delete confirmation dialog
+  const confirmDelete = (id: string) => {
+    setSelectedApontamentoId(id);
+    setDeleteDialogOpen(true);
+  }
+
+  // Handle delete button click
+  const handleDelete = async () => {
+    if (!selectedApontamentoId) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteApontamento(selectedApontamentoId);
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to delete apontamento:", error);
+      alert("Erro ao excluir apontamento");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Apontamento de resultados" />
@@ -81,7 +107,7 @@ export default function ApontamentoResultados() {
             </Select>
           </div>
 
-          <Button className="bg-brand-blue hover:bg-brand-darkBlue text-white" onClick={() => setOpen(true)}>
+          <Button className="bg-brand-blue hover:bg-brand-darkBlue text-white" onClick={() => setAddDialogOpen(true)}>
             Adicionar apontamento
           </Button>
         </div>
@@ -138,7 +164,14 @@ export default function ApontamentoResultados() {
                   ))
               ) : apontamentos.length > 0 ? (
                 apontamentos.map((apontamento: typeof ApontamentoType) => (
-                  <TableRow key={apontamento._id} className="transition-opacity duration-300 ease-in-out">
+                  <TableRow 
+                    key={apontamento._id} 
+                    className={`transition-all duration-300 ease-in-out ${
+                      selectedApontamentoId === apontamento._id && isDeleting
+                        ? "opacity-50 bg-red-50"
+                        : ""
+                    }`}
+                  >
                     <TableCell>{apontamento.periodo}</TableCell>
                     <TableCell>{apontamento.unidade}</TableCell>
                     <TableCell>{formatCurrency(apontamento.faturamento)}</TableCell>
@@ -155,8 +188,18 @@ export default function ApontamentoResultados() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-100">
-                          <Trash2 className="h-4 w-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                          onClick={() => confirmDelete(apontamento._id)}
+                          disabled={isDeleting && selectedApontamentoId === apontamento._id}
+                        >
+                          {isDeleting && selectedApontamentoId === apontamento._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -173,12 +216,50 @@ export default function ApontamentoResultados() {
           </Table>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
+        {/* Add Apontamento Dialog */}
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Adicionar apontamento</DialogTitle>
             </DialogHeader>
-            <AddApontamentoForm onClose={() => setOpen(false)} />
+            <AddApontamentoForm onClose={() => setAddDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={(open) => !isDeleting && setDeleteDialogOpen(open)}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Confirmar exclusão</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir este apontamento? Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setDeleteDialogOpen(false)}
+                className="flex-1"
+                disabled={isDeleting}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  'Excluir'
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
