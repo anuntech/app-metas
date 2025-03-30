@@ -25,7 +25,7 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
     to: undefined,
   })
 
-  const niveis = ["I", "II", "III", "IV", "V", "VI"]
+  const niveis = ["I", "II", "III", "IV"]
 
   const unidades = ["Total", "Caieiras", "Francisco Morato", "Mairiporã", "SP - Perus", "Franco da Rocha"]
 

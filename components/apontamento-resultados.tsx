@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -8,11 +8,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pencil, Trash2 } from "lucide-react"
 import { AddApontamentoForm } from "./add-apontamento-form"
 import { PageHeader } from "@/components/ui/page-header"
+import { useApontamentosContext, ApontamentoType } from "@/lib/context/ApontamentosContext"
 
 export default function ApontamentoResultados() {
   const [open, setOpen] = useState(false)
-  const currentMonth = new Date().getMonth()
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth.toString())
+  
+  // Use the apontamentos context
+  const { 
+    apontamentos, 
+    loading, 
+    currentMonth, 
+    setCurrentMonth,
+    initializeData
+  } = useApontamentosContext();
+
+  // Initialize data fetching when component mounts
+  useEffect(() => {
+    initializeData();
+  }, []);
 
   const months = [
     "Janeiro",
@@ -29,39 +42,18 @@ export default function ApontamentoResultados() {
     "Dezembro",
   ]
 
-  // Sample data for the table
-  const apontamentos = [
-    {
-      id: 1,
-      periodo: "01 a 15 de março",
-      unidade: "Caieiras",
-      faturamento: "R$ 60.000,00",
-      recebimento: "R$ 55.000,00",
-      despesa: "R$ 21.000,00",
-      inadimplenciaPercentual: "8%",
-      nivel: "II",
-    },
-    {
-      id: 2,
-      periodo: "16 a 31 de março",
-      unidade: "Franco da Rocha",
-      faturamento: "R$ 48.000,00",
-      recebimento: "R$ 42.000,00",
-      despesa: "R$ 15.360,00",
-      inadimplenciaPercentual: "12%",
-      nivel: "III",
-    },
-    {
-      id: 3,
-      periodo: "01 a 31 de março",
-      unidade: "Mairiporã",
-      faturamento: "R$ 110.000,00",
-      recebimento: "R$ 98.000,00",
-      despesa: "R$ 33.000,00",
-      inadimplenciaPercentual: "11%",
-      nivel: "IV",
-    },
-  ]
+  // Format currency values (BRL)
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value)
+  }
+
+  // Format percentage values
+  const formatPercentage = (value: number) => {
+    return `${value}%`
+  }
 
   return (
     <div>
@@ -69,8 +61,13 @@ export default function ApontamentoResultados() {
 
       <div className="container mx-auto space-y-6 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div className="w-full sm:w-64">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+          <div className="w-full sm:w-64 relative">
+            {loading && (
+              <div className="absolute right-10 top-1/2 transform -translate-y-1/2">
+                <div className="h-4 w-4 border-2 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+            <Select value={currentMonth.toString()} onValueChange={(value) => setCurrentMonth(parseInt(value))}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o mês" />
               </SelectTrigger>
@@ -104,31 +101,74 @@ export default function ApontamentoResultados() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {apontamentos.map((apontamento) => (
-                <TableRow key={apontamento.id}>
-                  <TableCell>{apontamento.periodo}</TableCell>
-                  <TableCell>{apontamento.unidade}</TableCell>
-                  <TableCell>{apontamento.faturamento}</TableCell>
-                  <TableCell>{apontamento.recebimento}</TableCell>
-                  <TableCell>{apontamento.despesa}</TableCell>
-                  <TableCell>{apontamento.inadimplenciaPercentual}</TableCell>
-                  <TableCell>{apontamento.nivel}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-brand-blue hover:text-brand-darkBlue hover:bg-brand-yellow hover:bg-opacity-20"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-100">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {loading ? (
+                // Loading skeleton rows
+                Array(5)
+                  .fill(0)
+                  .map((_, index) => (
+                    <TableRow key={`skeleton-${index}`} className="animate-pulse">
+                      <TableCell>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                          <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              ) : apontamentos.length > 0 ? (
+                apontamentos.map((apontamento: typeof ApontamentoType) => (
+                  <TableRow key={apontamento._id} className="transition-opacity duration-300 ease-in-out">
+                    <TableCell>{apontamento.periodo}</TableCell>
+                    <TableCell>{apontamento.unidade}</TableCell>
+                    <TableCell>{formatCurrency(apontamento.faturamento)}</TableCell>
+                    <TableCell>{formatCurrency(apontamento.recebimento)}</TableCell>
+                    <TableCell>{formatCurrency(apontamento.despesa)}</TableCell>
+                    <TableCell>{formatPercentage(apontamento.inadimplenciaPercentual)}</TableCell>
+                    <TableCell>{apontamento.nivel}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-brand-blue hover:text-brand-darkBlue hover:bg-brand-yellow hover:bg-opacity-20"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-100">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                    Nenhum apontamento encontrado para o mês selecionado
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>

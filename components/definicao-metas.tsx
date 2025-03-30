@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -18,7 +18,19 @@ export default function DefinicaoMetas() {
   const currentYear = new Date().getFullYear()
   
   // Use the context instead of local state and API calls
-  const { metas, loading, currentYear: contextYear, setCurrentYear, deleteMeta } = useMetasContext()
+  const { 
+    metas, 
+    loading, 
+    currentYear: contextYear, 
+    setCurrentYear, 
+    deleteMeta,
+    initializeData 
+  } = useMetasContext()
+
+  // Initialize data fetching when component mounts
+  useEffect(() => {
+    initializeData();
+  }, []);
 
   // Format currency values (BRL)
   const formatCurrency = (value: number) => {

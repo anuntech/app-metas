@@ -29,6 +29,7 @@ type MetasContextType = {
   refreshMetas: () => Promise<void>;
   currentYear: number;
   setCurrentYear: (year: number) => void;
+  initializeData: () => void;
 };
 
 // Create the context with a default value
@@ -40,6 +41,14 @@ export function MetasProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
+  const [shouldFetch, setShouldFetch] = useState<boolean>(false);
+
+  // Function to initialize data loading
+  const initializeData = () => {
+    if (!shouldFetch) {
+      setShouldFetch(true);
+    }
+  };
 
   // Fetch metas based on year
   const fetchMetas = async (year?: number) => {
@@ -155,10 +164,12 @@ export function MetasProvider({ children }: { children: ReactNode }) {
     await fetchMetas();
   };
 
-  // Load initial data
+  // Load data when shouldFetch and currentYear change
   useEffect(() => {
-    fetchMetas();
-  }, [currentYear]);
+    if (shouldFetch) {
+      fetchMetas();
+    }
+  }, [shouldFetch, currentYear]);
 
   return (
     <MetasContext.Provider value={{ 
@@ -171,7 +182,8 @@ export function MetasProvider({ children }: { children: ReactNode }) {
       deleteMeta, 
       refreshMetas,
       currentYear,
-      setCurrentYear 
+      setCurrentYear,
+      initializeData
     }}>
       {children}
     </MetasContext.Provider>
