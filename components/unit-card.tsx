@@ -51,7 +51,10 @@ export function UnitCard({ name, faturamento, despesa, inadimplencia }: UnitCard
             className="h-2 bg-gray-200"
             indicatorClassName={despesa.isNegative ? "bg-red-500" : "bg-brand-blue"}
           />
+          <div className="flex justify-between">
           <div className="text-xs text-muted-foreground">Meta: {despesa.meta}</div>
+          <div className="text-xs text-muted-foreground">{despesa.valorReais}</div>
+          </div>
         </div>
 
         {/* Inadimplência */}

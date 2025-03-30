@@ -39,6 +39,7 @@ export default function PainelResultados() {
       meta: 30,
       restante: -2,
       progresso: 94, // Lower is better for expenses
+      valorReais: 272000,
     },
     inadimplencia: {
       atual: 8,
@@ -62,6 +63,7 @@ export default function PainelResultados() {
         atual: 28,
         meta: 30,
         progresso: 93, // Lower is better
+        valorReais: 61600,
       },
       inadimplencia: {
         atual: 6,
@@ -81,6 +83,7 @@ export default function PainelResultados() {
         atual: 31,
         meta: 30,
         progresso: 97, // Lower is better
+        valorReais: 55800,
       },
       inadimplencia: {
         atual: 9,
@@ -100,6 +103,7 @@ export default function PainelResultados() {
         atual: 29,
         meta: 30,
         progresso: 97, // Lower is better
+        valorReais: 56550,
       },
       inadimplencia: {
         atual: 7,
@@ -119,6 +123,7 @@ export default function PainelResultados() {
         atual: 33,
         meta: 30,
         progresso: 91, // Lower is better
+        valorReais: 51150,
       },
       inadimplencia: {
         atual: 10,
@@ -138,6 +143,7 @@ export default function PainelResultados() {
         atual: 35,
         meta: 30,
         progresso: 86, // Lower is better
+        valorReais: 35000,
       },
       inadimplencia: {
         atual: 8,
@@ -228,6 +234,7 @@ export default function PainelResultados() {
               target={`Meta: ${summaryData.despesa.meta}%`}
               progress={summaryData.despesa.progresso}
               remaining={`${Math.abs(summaryData.despesa.restante)}% ${summaryData.despesa.restante < 0 ? "acima" : "abaixo"} da meta`}
+              secondaryText={formatCurrency(summaryData.despesa.valorReais)}
               isNegative={summaryData.despesa.restante < 0}
             />
 
@@ -262,6 +269,7 @@ export default function PainelResultados() {
                   atual: `${unidade.despesa.atual}%`,
                   meta: `${unidade.despesa.meta}%`,
                   progresso: unidade.despesa.progresso,
+                  valorReais: formatCurrency(unidade.despesa.valorReais),
                   isNegative: unidade.despesa.atual > unidade.despesa.meta,
                 }}
                 inadimplencia={{
