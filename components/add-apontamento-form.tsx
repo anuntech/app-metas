@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 import { useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -12,10 +13,10 @@ import { Loader2, CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
-import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useApontamentosContext } from "@/lib/context/ApontamentosContext"
-import { DateRange } from "react-day-picker"
+import { DateRange } from 'react-date-range'
+
 
 // Define a type for our form data
 type ApontamentoFormData = {
@@ -30,7 +31,13 @@ type ApontamentoFormData = {
 
 export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false)
-  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: new Date(),
+      endDate: undefined,
+      key: 'selection'
+    }
+  ]);
 
   // Use the apontamentos context
   const { addApontamento } = useApontamentosContext();
@@ -163,16 +170,16 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
   };
 
   // Handle date range selection
-  const handleDateRangeSelect = (range: DateRange | undefined) => {
-    setDateRange(range);
+  const handleDateRangeSelect = (ranges: any) => {
+    setDateRange([ranges.selection]);
     
     // Update the periodo field with formatted date range
-    if (range?.from) {
+    if (ranges.selection.startDate) {
       let periodoText = '';
-      if (range.to) {
-        periodoText = `${format(range.from, "dd", { locale: ptBR })} a ${format(range.to, "dd", { locale: ptBR })} de ${format(range.from, "MMMM", { locale: ptBR })}`;
+      if (ranges.selection.endDate) {
+        periodoText = `${format(ranges.selection.startDate, "dd", { locale: ptBR })} a ${format(ranges.selection.endDate, "dd", { locale: ptBR })} de ${format(ranges.selection.startDate, "MMMM", { locale: ptBR })}`;
       } else {
-        periodoText = format(range.from, "dd 'de' MMMM", { locale: ptBR });
+        periodoText = format(ranges.selection.startDate, "dd 'de' MMMM", { locale: ptBR });
       }
       
       setFormData({
@@ -193,13 +200,13 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
       }
       
       // Validate that dateRange has necessary values
-      if (!dateRange?.from) {
+      if (!dateRange[0].startDate) {
         throw new Error("É necessário selecionar uma data");
       }
       
       // Get month and year from selected date
-      const startDate = dateRange.from;
-      const endDate = dateRange.to || startDate;
+      const startDate = dateRange[0].startDate;
+      const endDate = dateRange[0].endDate || startDate;
       
       // Get month name in Portuguese
       const months = [
@@ -253,7 +260,7 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
               variant={"outline"}
               className={cn(
                 "w-full justify-start text-left font-normal text-sm",
-                !dateRange?.from && "text-muted-foreground",
+                !dateRange[0].startDate && "text-muted-foreground",
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -261,14 +268,15 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={dateRange?.from}
-              selected={dateRange}
-              onSelect={handleDateRangeSelect}
-              numberOfMonths={1}
+            <DateRange
+              editableDateInputs={true}
+              onChange={handleDateRangeSelect}
+              moveRangeOnFirstSelection={false}
+              ranges={dateRange}
               locale={ptBR}
+              rangeColors={['#1E40AF']}
+              months={1}
+              direction="vertical"
             />
           </PopoverContent>
         </Popover>

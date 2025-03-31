@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Loader2 } from "lucide-react"
 import { AddMetaForm } from "./add-meta-form"
 import { EditMetaForm } from "./edit-meta-form"
 import { PageHeader } from "@/components/ui/page-header"
@@ -14,7 +14,10 @@ import { useMetasContext, Meta } from "@/lib/context/MetasContext"
 export default function DefinicaoMetas() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedMeta, setSelectedMeta] = useState<Meta | null>(null)
+  const [selectedMetaId, setSelectedMetaId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const currentYear = new Date().getFullYear()
   
   // Use the context instead of local state and API calls
@@ -51,15 +54,26 @@ export default function DefinicaoMetas() {
     setEditDialogOpen(true);
   };
 
+  // Open delete confirmation dialog
+  const confirmDelete = (id: string) => {
+    setSelectedMetaId(id);
+    setDeleteDialogOpen(true);
+  }
+
   // Handle delete button click
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
-      try {
-        await deleteMeta(id);
-      } catch (error) {
-        console.error("Failed to delete meta:", error);
-        alert("Erro ao excluir meta");
-      }
+  const handleDelete = async () => {
+    if (!selectedMetaId) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteMeta(selectedMetaId);
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to delete meta:", error);
+      alert("Erro ao excluir meta");
+    } finally {
+      setIsDeleting(false);
+      setSelectedMetaId(null);
     }
   }
 
@@ -149,7 +163,9 @@ export default function DefinicaoMetas() {
                   ))
               ) : metas.length > 0 ? (
                 metas.map((meta) => (
-                  <TableRow key={meta._id} className="transition-opacity duration-300 ease-in-out">
+                  <TableRow key={meta._id} className={`transition-all duration-300 ease-in-out ${
+                    selectedMetaId === meta._id && isDeleting ? "opacity-50 bg-red-50" : ""
+                  }`}>
                     <TableCell>{meta.mes}</TableCell>
                     <TableCell>{meta.unidade}</TableCell>
                     <TableCell>{formatCurrency(meta.faturamento)}</TableCell>
@@ -171,9 +187,14 @@ export default function DefinicaoMetas() {
                           variant="ghost"
                           size="icon"
                           className="text-red-500 hover:text-red-700 hover:bg-red-100"
-                          onClick={() => handleDelete(meta._id)}
+                          onClick={() => confirmDelete(meta._id)}
+                          disabled={isDeleting && selectedMetaId === meta._id}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {isDeleting && selectedMetaId === meta._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -217,6 +238,43 @@ export default function DefinicaoMetas() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={(open) => !isDeleting && setDeleteDialogOpen(open)}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Confirmar exclusão</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir esta meta? Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setDeleteDialogOpen(false)}
+                className="flex-1"
+                disabled={isDeleting}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  'Excluir'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
