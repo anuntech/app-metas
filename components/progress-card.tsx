@@ -20,6 +20,9 @@ export function ProgressCard({
   secondaryText,
   isNegative = false,
 }: ProgressCardProps) {
+  // If isNegative is true but progress is 0, show full red bar (100%)
+  const displayProgress = isNegative && progress === 0 ? 100 : Math.min(progress, 100);
+  
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -29,7 +32,7 @@ export function ProgressCard({
         <div className="text-2xl font-bold">{value}</div>
         <div className="text-xs text-muted-foreground mt-1 mb-2">{remaining}</div>
         <Progress
-          value={progress}
+          value={displayProgress}
           className="h-2 bg-gray-200"
           indicatorClassName={isNegative ? "bg-red-500" : "bg-brand-blue"}
         />

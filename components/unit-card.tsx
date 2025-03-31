@@ -26,6 +26,15 @@ interface UnitCardProps {
 }
 
 export function UnitCard({ name, faturamento, despesa, inadimplencia }: UnitCardProps) {
+  // Cap progress values to 100% for proper display
+  // When isNegative is true but progress is 0, show full red bar (100%)
+  const faturamentoProgress = Math.min(faturamento.progresso, 100);
+  const despesaProgress = despesa.isNegative && despesa.progresso === 0 ? 100 : Math.min(despesa.progresso, 100);
+  const inadimplenciaProgress = inadimplencia.isNegative && inadimplencia.progresso === 0 ? 100 : Math.min(inadimplencia.progresso, 100);
+  
+  // Debug info (can be removed after fixing)
+  console.log(`${name} - Despesa progress: ${despesa.progresso}, isNegative: ${despesa.isNegative}, using progress: ${despesaProgress}`);
+  
   return (
     <Card>
       <CardHeader className="pb-2 pt-2 bg-brand-blue">
@@ -39,7 +48,7 @@ export function UnitCard({ name, faturamento, despesa, inadimplencia }: UnitCard
             <div className="text-sm font-medium">{faturamento.atual}</div>
           </div>
           <Progress 
-            value={faturamento.progresso} 
+            value={faturamentoProgress} 
             className="h-2 bg-gray-200" 
             indicatorClassName={faturamento.isNegative ? "bg-red-500" : "bg-brand-blue"} 
           />
@@ -53,7 +62,7 @@ export function UnitCard({ name, faturamento, despesa, inadimplencia }: UnitCard
             <div className="text-sm font-medium">{despesa.atual}</div>
           </div>
           <Progress
-            value={despesa.progresso}
+            value={despesaProgress}
             className="h-2 bg-gray-200"
             indicatorClassName={despesa.isNegative ? "bg-red-500" : "bg-brand-blue"}
           />
@@ -70,7 +79,7 @@ export function UnitCard({ name, faturamento, despesa, inadimplencia }: UnitCard
             <div className="text-sm font-medium">{inadimplencia.atual}</div>
           </div>
           <Progress
-            value={inadimplencia.progresso}
+            value={inadimplenciaProgress}
             className="h-2 bg-gray-200"
             indicatorClassName={inadimplencia.isNegative ? "bg-red-500" : "bg-brand-blue"}
           />

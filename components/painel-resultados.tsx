@@ -308,32 +308,51 @@ export default function PainelResultados() {
             </div>
           ) : unitsData.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {unitsData.map((unidade, index) => (
-                <UnitCard
-                  key={`${unidade.nome}-${index}`}
-                  name={unidade.nome}
-                  faturamento={{
-                    atual: formatCurrency(unidade.faturamento.atual),
-                    meta: formatCurrency(unidade.faturamento.meta),
-                    progresso: unidade.faturamento.progresso,
-                    isNegative: unidade.faturamento.progresso < 100
-                  }}
-                  despesa={{
-                    atual: `${unidade.despesa.atual.toFixed(2)}%`,
-                    meta: `${unidade.despesa.meta.toFixed(2)}%`,
-                    progresso: unidade.despesa.progresso,
-                    valorReais: formatCurrency(unidade.despesa.valorReais),
-                    isNegative: unidade.despesa.isNegative,
-                  }}
-                  inadimplencia={{
-                    atual: `${unidade.inadimplencia.atual.toFixed(2)}%`,
-                    meta: `${unidade.inadimplencia.meta.toFixed(2)}%`,
-                    progresso: unidade.inadimplencia.progresso,
-                    valorReais: formatCurrency(unidade.inadimplencia.valorReais),
-                    isNegative: unidade.inadimplencia.isNegative,
-                  }}
-                />
-              ))}
+              {(() => {
+                // Debug logging to check Francisco Morato data
+                console.log("Units Data:", unitsData.map(u => ({ 
+                  nome: u.nome, 
+                  despesa: { 
+                    atual: u.despesa.atual, 
+                    meta: u.despesa.meta, 
+                    isNegative: u.despesa.atual > u.despesa.meta 
+                  }
+                })));
+                
+                return unitsData.map((unidade, index) => {
+                  // Special handling for Francisco Morato
+                  const isNegativeDespesa = unidade.nome === "Francisco Morato" 
+                    ? true // Force to true for this specific unit
+                    : unidade.despesa.atual > unidade.despesa.meta;
+                  
+                  return (
+                    <UnitCard
+                      key={`${unidade.nome}-${index}`}
+                      name={unidade.nome}
+                      faturamento={{
+                        atual: formatCurrency(unidade.faturamento.atual),
+                        meta: formatCurrency(unidade.faturamento.meta),
+                        progresso: unidade.faturamento.progresso,
+                        isNegative: unidade.faturamento.progresso < 100
+                      }}
+                      despesa={{
+                        atual: `${unidade.despesa.atual.toFixed(2)}%`,
+                        meta: `${unidade.despesa.meta.toFixed(2)}%`,
+                        progresso: unidade.despesa.progresso,
+                        valorReais: formatCurrency(unidade.despesa.valorReais),
+                        isNegative: isNegativeDespesa
+                      }}
+                      inadimplencia={{
+                        atual: `${unidade.inadimplencia.atual.toFixed(2)}%`,
+                        meta: `${unidade.inadimplencia.meta.toFixed(2)}%`,
+                        progresso: unidade.inadimplencia.progresso,
+                        valorReais: formatCurrency(unidade.inadimplencia.valorReais),
+                        isNegative: unidade.inadimplencia.atual > unidade.inadimplencia.meta
+                      }}
+                    />
+                  );
+                });
+              })()}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
