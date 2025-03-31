@@ -242,9 +242,9 @@ export default function PainelResultados() {
                 value={`${summaryData.despesa.atual.toFixed(2)}%`}
                 target={`Meta: ${summaryData.despesa.meta.toFixed(2)}%`}
                 progress={summaryData.despesa.progresso}
-                remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.restante < 0 ? "acima" : "abaixo"} da meta`}
+                remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.atual > summaryData.despesa.meta ? "acima" : "abaixo"} da meta`}
                 secondaryText={formatCurrency(summaryData.despesa.valorReais)}
-                isNegative={summaryData.despesa.restante < 0}
+                isNegative={summaryData.despesa.atual > summaryData.despesa.meta}
               />
 
               {/* Inadimplência Card */}
