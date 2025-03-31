@@ -5,11 +5,13 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ProgressCard } from "./progress-card"
 import { UnitCard } from "./unit-card"
 import { PageHeader } from "@/components/ui/page-header"
+import 'react-date-range/dist/styles.css'
+import 'react-date-range/dist/theme/default.css'
+import { DateRange } from 'react-date-range'
 
 // Define types for API responses
 type SummaryData = {
@@ -66,13 +68,13 @@ type UnitData = {
 }
 
 export default function PainelResultados() {
-  const [dateRange, setDateRange] = useState<{
-    from: Date
-    to: Date
-  }>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-  })
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
+      key: 'selection'
+    }
+  ])
   
   const [loading, setLoading] = useState(false)
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null)
@@ -86,8 +88,8 @@ export default function PainelResultados() {
     
     try {
       // Format dates for API requests
-      const startDate = dateRange.from.toISOString()
-      const endDate = dateRange.to.toISOString()
+      const startDate = dateRange[0].startDate.toISOString()
+      const endDate = dateRange[0].endDate.toISOString()
       
       // Build query params
       const queryParams = new URLSearchParams({ startDate, endDate })
@@ -146,6 +148,11 @@ export default function PainelResultados() {
     }
   }
 
+  // Handle date range change
+  const handleDateRangeChange = (ranges: any) => {
+    setDateRange([ranges.selection])
+  }
+
   return (
     <div>
       <PageHeader title="Painel de resultados" />
@@ -156,7 +163,7 @@ export default function PainelResultados() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h2 className="text-2xl font-semibold">Resumo total</h2>
-              <p className="text-muted-foreground">Período: {formatPeriod(dateRange.from, dateRange.to)}</p>
+              <p className="text-muted-foreground">Período: {formatPeriod(dateRange[0].startDate, dateRange[0].endDate)}</p>
             </div>
 
             <Popover>
@@ -166,22 +173,19 @@ export default function PainelResultados() {
                   className="justify-start text-left font-normal text-brand-blue border-brand-blue text-sm"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4 text-brand-blue" />
-                  {formatPeriod(dateRange.from, dateRange.to)}
+                  {formatPeriod(dateRange[0].startDate, dateRange[0].endDate)}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange.from}
-                  selected={dateRange}
-                  onSelect={(range) => {
-                    if (range?.from && range?.to) {
-                      setDateRange({ from: range.from, to: range.to })
-                    }
-                  }}
-                  numberOfMonths={1}
+                <DateRange
+                  editableDateInputs={true}
+                  onChange={handleDateRangeChange}
+                  moveRangeOnFirstSelection={false}
+                  ranges={dateRange}
                   locale={ptBR}
+                  rangeColors={['#1E40AF']}
+                  months={1}
+                  direction="vertical"
                 />
               </PopoverContent>
             </Popover>
@@ -269,7 +273,7 @@ export default function PainelResultados() {
         <div className="space-y-4">
           <div>
             <h2 className="text-2xl font-semibold">Unidades</h2>
-            <p className="text-muted-foreground">Período: {formatPeriod(dateRange.from, dateRange.to)}</p>
+            <p className="text-muted-foreground">Período: {formatPeriod(dateRange[0].startDate, dateRange[0].endDate)}</p>
           </div>
 
           {loading ? (
