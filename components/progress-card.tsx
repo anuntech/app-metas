@@ -20,8 +20,8 @@ export function ProgressCard({
   secondaryText,
   isNegative = false,
 }: ProgressCardProps) {
-  // If isNegative is true but progress is 0, show full red bar (100%)
-  const displayProgress = isNegative && progress === 0 ? 100 : Math.min(progress, 100);
+  // Simple progress display, capped at 100%
+  const displayProgress = Math.min(progress, 100);
   
   return (
     <Card>

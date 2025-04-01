@@ -248,7 +248,7 @@ export default function PainelResultados() {
                 progress={summaryData.despesa.progresso}
                 remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.atual > summaryData.despesa.meta ? "acima" : "abaixo"} da meta`}
                 secondaryText={formatCurrency(summaryData.despesa.valorReais)}
-                isNegative={summaryData.despesa.atual > summaryData.despesa.meta}
+                isNegative={summaryData.despesa.progresso >= 100}
               />
 
               {/* Inadimplência Card */}
@@ -259,7 +259,7 @@ export default function PainelResultados() {
                 progress={summaryData.inadimplencia.progresso}
                 remaining={`${Math.abs(summaryData.inadimplencia.restante).toFixed(2)}% ${summaryData.inadimplencia.restante > 0 ? "acima" : "abaixo"} da meta`}
                 secondaryText={formatCurrency(summaryData.inadimplencia.valorReais)}
-                isNegative={summaryData.inadimplencia.restante > 0}
+                isNegative={summaryData.inadimplencia.progresso >= 100}
               />
             </div>
           ) : (
@@ -273,7 +273,6 @@ export default function PainelResultados() {
         <div className="space-y-4">
           <div>
             <h2 className="text-2xl font-semibold">Unidades</h2>
-            <p className="text-muted-foreground">Período: {formatPeriod(dateRange[0].startDate, dateRange[0].endDate)}</p>
           </div>
 
           {loading ? (
@@ -324,11 +323,6 @@ export default function PainelResultados() {
                 })));
                 
                 return unitsData.map((unidade, index) => {
-                  // Special handling for Francisco Morato
-                  const isNegativeDespesa = unidade.nome === "Francisco Morato" 
-                    ? true // Force to true for this specific unit
-                    : unidade.despesa.atual > unidade.despesa.meta;
-                  
                   return (
                     <UnitCard
                       key={`${unidade.nome}-${index}`}
@@ -344,14 +338,14 @@ export default function PainelResultados() {
                         meta: `${unidade.despesa.meta.toFixed(2)}%`,
                         progresso: unidade.despesa.progresso,
                         valorReais: formatCurrency(unidade.despesa.valorReais),
-                        isNegative: isNegativeDespesa
+                        isNegative: unidade.despesa.progresso >= 100
                       }}
                       inadimplencia={{
                         atual: `${unidade.inadimplencia.atual.toFixed(2)}%`,
                         meta: `${unidade.inadimplencia.meta.toFixed(2)}%`,
                         progresso: unidade.inadimplencia.progresso,
                         valorReais: formatCurrency(unidade.inadimplencia.valorReais),
-                        isNegative: unidade.inadimplencia.atual > unidade.inadimplencia.meta
+                        isNegative: unidade.inadimplencia.progresso >= 100
                       }}
                     />
                   );
