@@ -1,5 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
 
 interface UnitCardProps {
   name: string
@@ -23,9 +25,11 @@ interface UnitCardProps {
     valorReais?: string
     isNegative: boolean
   }
+  onNextMeta?: () => void
+  isLoading?: boolean
 }
 
-export function UnitCard({ name, faturamento, despesa, inadimplencia }: UnitCardProps) {
+export function UnitCard({ name, faturamento, despesa, inadimplencia, onNextMeta, isLoading = false }: UnitCardProps) {
   // Cap progress values to 100% for proper display
   const faturamentoProgress = Math.min(faturamento.progresso, 100);
   const despesaProgress = Math.min(despesa.progresso, 100);
@@ -85,6 +89,24 @@ export function UnitCard({ name, faturamento, despesa, inadimplencia }: UnitCard
           </div>
         </div>
       </CardContent>
+      <CardFooter className="pt-0 pb-4">
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="w-full bg-brand-blue bg-opacity-10 hover:bg-brand-blue hover:bg-opacity-20 hover:text-brand-blue border-brand-blue text-brand-blue"
+          onClick={onNextMeta}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Atualizando...
+            </>
+          ) : (
+            "Próxima meta"
+          )}
+        </Button>
+      </CardFooter>
     </Card>
   )
 }

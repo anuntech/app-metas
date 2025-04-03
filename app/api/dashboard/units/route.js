@@ -9,6 +9,7 @@ export async function GET(request) {
     // Get date range parameters
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const metaLevel = searchParams.get('metaLevel'); // Get meta level parameter
     
     // Validate date parameters
     if (!startDate || !endDate) {
@@ -17,7 +18,8 @@ export async function GET(request) {
       }, { status: 400 });
     }
     
-    const result = await getUnitsDashboardController(startDate, endDate);
+    // Pass meta level to controller
+    const result = await getUnitsDashboardController(startDate, endDate, metaLevel);
     
     if (result.status === 200) {
       return NextResponse.json(result.data, { status: 200 });
