@@ -3,6 +3,7 @@ import "@/app/globals.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { MetasProvider } from "@/lib/context/MetasContext"
+import { ToastProvider } from "@/components/custom-toast"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -19,9 +20,11 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <MetasProvider>
-            {children}
-          </MetasProvider>
+          <ToastProvider>
+            <MetasProvider>
+              {children}
+            </MetasProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

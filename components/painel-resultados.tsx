@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import 'react-date-range/dist/styles.css'
 import 'react-date-range/dist/theme/default.css'
 import { DateRange } from 'react-date-range'
+import { useToast } from "@/components/custom-toast"
 
 // Define types for API responses
 type SummaryData = {
@@ -104,6 +105,9 @@ export default function PainelResultados() {
   const [metaCompleting, setMetaCompleting] = useState<boolean>(false)
   const [updatingUnitIndex, setUpdatingUnitIndex] = useState<number | null>(null)
   const [activeMetaLevels, setActiveMetaLevels] = useState<{[key: string]: string}>({})
+  
+  // Use the toast hook
+  const { addToast } = useToast()
 
   // Month names array
   const monthNames = [
@@ -151,6 +155,21 @@ export default function PainelResultados() {
       const nextLevel = result.nextLevel;
       console.log(`[handleNextMetaLevel] Updating to next level: ${nextLevel}`);
       
+      // First check if there's a meta for the next level
+      const nextMetaExists = await checkMetaExists('Total', nextLevel, month, year);
+      
+      if (!nextMetaExists) {
+        // Show toast notification instead of setting error state
+        addToast({
+          title: "Atenção",
+          message: `Não existe meta de nível ${nextLevel} para Total.`,
+          type: "warning",
+          duration: 5000,
+        });
+        // Don't advance to next level as it doesn't exist
+        return;
+      }
+      
       // Set the current meta level first
       setCurrentMetaLevel(nextLevel);
       
@@ -165,7 +184,6 @@ export default function PainelResultados() {
       });
       
       // We need to completely refresh the data after changing the total meta level
-      // This is important to ensure everything is in sync
       console.log(`[handleNextMetaLevel] Refreshing active meta levels`);
       await fetchActiveMetaLevels();
       
@@ -176,7 +194,13 @@ export default function PainelResultados() {
       
     } catch (err) {
       console.error('[handleNextMetaLevel] Error completing meta:', err);
-      setError(err instanceof Error ? err.message : 'Error completing meta');
+      // Show error as toast instead of setting error state
+      addToast({
+        title: "Erro",
+        message: err instanceof Error ? err.message : 'Erro ao completar meta',
+        type: "error",
+        duration: 5000,
+      });
     } finally {
       setMetaCompleting(false);
     }
@@ -219,9 +243,26 @@ export default function PainelResultados() {
       const result = await response.json();
       console.log(`Got response for ${unitName}:`, result);
       
+      // Check if the next level meta exists before proceeding
+      const nextLevel = result.nextLevel;
+      const nextMetaExists = await checkMetaExists(unitName, nextLevel, month, year);
+      
+      if (!nextMetaExists) {
+        // Show a toast notification that this unit has completed all available metas
+        addToast({
+          title: "Atenção",
+          message: `Não existe meta de nível ${nextLevel} para ${unitName}.`,
+          type: "warning",
+          duration: 5000,
+        });
+        
+        // Instead of removing the unit from the UI, keep it visible with the last available level
+        // We've communicated to the user via toast about no next meta
+        return;
+      }
+      
       if (result.hasNextMeta) {
         // Update activeMetaLevels state with the new level
-        const nextLevel = result.nextLevel;
         console.log(`${unitName} has next level: ${nextLevel}`);
         
         // Update the active meta levels
@@ -263,17 +304,22 @@ export default function PainelResultados() {
           setUnitsData(updatedUnitsData);
         } else {
           console.error(`Failed to fetch data for ${unitName} at level ${nextLevel}`);
+          addToast({
+            title: "Erro",
+            message: `Não foi possível obter os dados para ${unitName} no nível ${nextLevel}.`,
+            type: "error",
+            duration: 3000,
+          });
         }
       } else {
-        console.log(`${unitName} has no next meta, removing from list`);
-        // If there's no next meta for this unit, just remove it from the list
-        const updatedUnitsData = unitsData.filter((_, index) => index !== unitIndex);
-        setUnitsData(updatedUnitsData);
-        
-        // Also remove it from activeMetaLevels
-        const updatedLevels = { ...activeMetaLevels };
-        delete updatedLevels[unitName];
-        setActiveMetaLevels(updatedLevels);
+        console.log(`${unitName} has no next meta, showing toast notification`);
+        // Instead of removing it from the list, show a toast notification
+        addToast({
+          title: "Informação",
+          message: `${unitName} não possui mais metas para este período.`,
+          type: "info",
+          duration: 3000,
+        });
       }
       
       // After processing this unit, ensure all active meta levels are in sync
@@ -284,9 +330,33 @@ export default function PainelResultados() {
       
     } catch (err) {
       console.error('Error completing unit meta:', err);
-      setError(err instanceof Error ? err.message : 'Error completing unit meta');
+      addToast({
+        title: "Erro",
+        message: err instanceof Error ? err.message : 'Erro ao completar meta da unidade',
+        type: "error",
+        duration: 5000,
+      });
     } finally {
       setUpdatingUnitIndex(null);
+    }
+  }
+
+  // Function to check if a meta exists for a given unit, level, month and year
+  const checkMetaExists = async (unitName: string, level: string, month: string, year: number): Promise<boolean> => {
+    try {
+      // Query the API to check if a meta exists
+      const response = await fetch(`/api/dashboard/meta/check-exists?unitName=${unitName}&metaLevel=${level}&month=${month}&year=${year}`);
+      
+      if (!response.ok) {
+        console.error(`Failed to check if meta exists: ${response.status}`);
+        return false;
+      }
+      
+      const result = await response.json();
+      return result.exists;
+    } catch (error) {
+      console.error('Error checking if meta exists:', error);
+      return false;
     }
   }
 
@@ -515,6 +585,13 @@ export default function PainelResultados() {
       
     } catch (err) {
       console.error('[fetchDashboardData] Error fetching dashboard data:', err);
+      // Use toast for API errors instead of setting error state
+      addToast({
+        title: "Erro",
+        message: err instanceof Error ? err.message : 'Erro ao carregar dados',
+        type: "error",
+        duration: 5000,
+      });
       setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -583,8 +660,7 @@ export default function PainelResultados() {
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-xs font-medium text-white">
                   {activeMetaLevels.Total || currentMetaLevel}
                 </span>
-              </Button>           
-
+              </Button>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -627,7 +703,7 @@ export default function PainelResultados() {
                 </div>
               ))}
             </div>
-          ) : error ? (
+          ) : !summaryData && error ? (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
               <p>Erro ao carregar dados: {error}</p>
               <Button 
