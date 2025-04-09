@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -113,76 +113,14 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
     // Apply specific formatting based on field type
     if (field === 'faturamento' || field === 'recebimento' || field === 'despesa' || field === 'inadimplenciaValor') {
       formattedValue = formatCurrencyInput(value);
-      
-      // If faturamento is updated, recalculate inadimplencia value based on percentage
-      if (field === 'faturamento' && formData.inadimplenciaPercentual) {
-        const faturamentoValue = Number(formattedValue.replace(/\./g, '').replace(',', '.')) || 0;
-        const inadimplenciaPercentual = Number(formData.inadimplenciaPercentual.replace(/%/g, '').replace(',', '.')) || 0;
-        
-        // Calculate new inadimplencia value
-        const inadimplenciaValor = (faturamentoValue * inadimplenciaPercentual / 100).toFixed(2);
-        
-        // Format the inadimplencia value
-        const formattedInadimplenciaValor = formatCurrencyInput(inadimplenciaValor.replace('.', ''));
-        
-        // Update form data with both changes
-        setFormData({
-          ...formData,
-          [field]: formattedValue,
-          inadimplenciaValor: formattedInadimplenciaValor
-        });
-        return; // Return early as we've already updated state
-      }
-      
-      // If inadimplenciaValor is updated, recalculate percentage based on faturamento
-      if (field === 'inadimplenciaValor' && formData.faturamento) {
-        const faturamentoValue = Number(formData.faturamento.replace(/\./g, '').replace(',', '.')) || 0;
-        const inadimplenciaValor = Number(formattedValue.replace(/\./g, '').replace(',', '.')) || 0;
-        
-        if (faturamentoValue > 0) {
-          // Calculate percentage
-          const percentage = (inadimplenciaValor / faturamentoValue * 100).toFixed(2);
-          const formattedPercentage = percentage + '%';
-          
-          // Update form data with both changes
-          setFormData({
-            ...formData,
-            [field]: formattedValue,
-            inadimplenciaPercentual: formattedPercentage
-          });
-          return; // Return early as we've already updated state
-        }
-      }
     } else if (field === 'inadimplenciaPercentual') {
       // Only format if not empty
       if (value) {
-        // Remove % sign for calculation
-        const cleanValue = value.replace(/%/g, '');
         formattedValue = formatPercentageInput(value);
-        
-        // If faturamento exists, calculate inadimplencia value
-        if (formData.faturamento) {
-          const faturamentoValue = Number(formData.faturamento.replace(/\./g, '').replace(',', '.')) || 0;
-          const percentage = Number(cleanValue.replace(',', '.')) || 0;
-          
-          // Calculate new inadimplencia value
-          const inadimplenciaValor = (faturamentoValue * percentage / 100).toFixed(2);
-          
-          // Format the inadimplencia value
-          const formattedInadimplenciaValor = formatCurrencyInput(inadimplenciaValor.replace('.', ''));
-          
-          // Update form data with both changes
-          setFormData({
-            ...formData,
-            [field]: formattedValue,
-            inadimplenciaValor: formattedInadimplenciaValor
-          });
-          return; // Return early as we've already updated state
-        }
       }
     }
     
-    // Default update for a single field
+    // Update just the single field
     setFormData({
       ...formData,
       [field]: formattedValue
@@ -215,8 +153,8 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
 
     try {
       // Validate required fields before submission
-      if (!formData.periodo || !formData.unidade) {
-        throw new Error("Preencha todos os campos obrigatórios: Período e Unidade");
+      if (!formData.periodo || !formData.unidade || !formData.faturamento || !formData.inadimplenciaPercentual) {
+        throw new Error("Preencha todos os campos obrigatórios: Período, Unidade, Faturamento e Inadimplência (%)");
       }
       
       // Validate that dateRange has necessary values
@@ -356,7 +294,7 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="inadimplenciaPercentual">Inadimplência (%)</Label>
+          <Label htmlFor="inadimplenciaPercentual">Inadimplência (%) *</Label>
           <Input 
             id="inadimplenciaPercentual" 
             type="text" 
@@ -364,11 +302,12 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
             className="text-sm"
             value={formData.inadimplenciaPercentual}
             onChange={(e) => handleChange('inadimplenciaPercentual', e.target.value)}
+            required
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="inadimplenciaValor">Inadimplência (R$)</Label>
+          <Label htmlFor="inadimplenciaValor">Inadimplência (R$) (opcional)</Label>
           <Input 
             id="inadimplenciaValor" 
             type="text" 

@@ -1,6 +1,6 @@
 "use client"
 
-import { Home } from "lucide-react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 
@@ -22,7 +22,7 @@ export function PageHeader({ title }: PageHeaderProps) {
           title="Voltar para a página inicial"
           className="text-white hover:bg-brand-darkBlue"
         >
-          <Home className="h-5 w-5" />
+          <Image src="/casaDoConstrutor.svg" alt="Casa do Construtor" width={42} height={42} />
         </Button>
       </div>
     </div>

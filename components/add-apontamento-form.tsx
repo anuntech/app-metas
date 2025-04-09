@@ -93,18 +93,14 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
     // Apply specific formatting based on field type
     if (field === 'faturamento' || field === 'recebimento' || field === 'despesa' || field === 'inadimplenciaValor') {
       formattedValue = formatCurrencyInput(value);
-      
-      // Remove the interconnected calculation logic
-      // Keep just the field formatting
     } else if (field === 'inadimplenciaPercentual') {
       // Only format if not empty
       if (value) {
         formattedValue = formatPercentageInput(value);
-        // Remove the calculation logic that updated inadimplenciaValor
       }
     }
     
-    // Default update for a single field
+    // Update just the single field
     setFormData({
       ...formData,
       [field]: formattedValue
@@ -112,6 +108,7 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
   };
 
   // Handle date range selection
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDateRangeSelect = (ranges: any) => {
     setDateRange([ranges.selection]);
     
@@ -137,8 +134,8 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
 
     try {
       // Validate required fields before submission
-      if (!formData.periodo || !formData.unidade) {
-        throw new Error("Preencha todos os campos obrigatórios: Período e Unidade");
+      if (!formData.periodo || !formData.unidade || !formData.faturamento || !formData.inadimplenciaPercentual) {
+        throw new Error("Preencha todos os campos obrigatórios: Período, Unidade, Faturamento e Inadimplência (%)");
       }
       
       // Validate that dateRange has necessary values
@@ -281,7 +278,7 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="inadimplenciaPercentual">Inadimplência (%)</Label>
+          <Label htmlFor="inadimplenciaPercentual">Inadimplência (%) *</Label>
           <Input 
             id="inadimplenciaPercentual" 
             type="text" 
@@ -289,11 +286,12 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
             className="text-sm"
             value={formData.inadimplenciaPercentual}
             onChange={(e) => handleChange('inadimplenciaPercentual', e.target.value)}
+            required
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="inadimplenciaValor">Inadimplência (R$)</Label>
+          <Label htmlFor="inadimplenciaValor">Inadimplência (R$) (opcional)</Label>
           <Input 
             id="inadimplenciaValor" 
             type="text" 

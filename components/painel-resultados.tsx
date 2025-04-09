@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, ReactNode } from "react"
+import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { CalendarIcon, Loader2 } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ProgressCard } from "./progress-card"
@@ -14,7 +14,62 @@ import 'react-date-range/dist/theme/default.css'
 import { DateRange } from 'react-date-range'
 import { useToast } from "@/components/custom-toast"
 
-// Define types for API responses
+// Type definitions for API responses
+type ApiProgressResponse = {
+  summary: {
+    faturamento: {
+      atual: number;
+      overallProgress: number;
+      metaLevels: MetaLevel[];
+    };
+    faturamentoPorFuncionario: {
+      atual: number;
+      overallProgress: number;
+      metaLevels: MetaLevel[];
+    };
+    despesa: {
+      atual: number;
+      overallProgress: number;
+      valorReais: number;
+      metaLevels: MetaLevel[];
+    };
+    inadimplencia: {
+      atual: number;
+      overallProgress: number;
+      valorReais: number;
+      metaLevels: MetaLevel[];
+    };
+    totalFuncionarios: number;
+  };
+  units: Array<{
+    nome: string;
+    faturamento: {
+      atual: number;
+      overallProgress: number;
+      metaLevels: MetaLevel[];
+    };
+    despesa: {
+      atual: number;
+      overallProgress: number;
+      valorReais: number;
+      metaLevels: MetaLevel[];
+    };
+    inadimplencia: {
+      atual: number;
+      overallProgress: number;
+      valorReais: number;
+      metaLevels: MetaLevel[];
+    };
+  }>;
+};
+
+// Update the type definitions to include metaLevels
+type MetaLevel = {
+  nivel: string;
+  valor: number;
+  progress: number;
+};
+
 type SummaryData = {
   faturamento: {
     atual: number
@@ -22,6 +77,7 @@ type SummaryData = {
     restante: number
     progresso: number
     nivel?: string
+    metaLevels?: MetaLevel[]
   }
   faturamentoPorFuncionario: {
     atual: number
@@ -29,6 +85,7 @@ type SummaryData = {
     restante: number
     progresso: number
     nivel?: string
+    metaLevels?: MetaLevel[]
   }
   despesa: {
     atual: number
@@ -37,6 +94,7 @@ type SummaryData = {
     progresso: number
     valorReais: number
     nivel?: string
+    metaLevels?: MetaLevel[]
   }
   inadimplencia: {
     atual: number
@@ -45,6 +103,7 @@ type SummaryData = {
     progresso: number
     valorReais: number
     nivel?: string
+    metaLevels?: MetaLevel[]
   }
   totalFuncionarios: number
 }
@@ -56,6 +115,7 @@ type UnitData = {
     meta: number
     progresso: number
     nivel?: string
+    metaLevels?: MetaLevel[]
   }
   despesa: {
     atual: number
@@ -64,6 +124,7 @@ type UnitData = {
     valorReais: number
     isNegative: boolean
     nivel?: string
+    metaLevels?: MetaLevel[]
   }
   inadimplencia: {
     atual: number
@@ -72,11 +133,12 @@ type UnitData = {
     valorReais: number
     isNegative: boolean
     nivel?: string
+    metaLevels?: MetaLevel[]
   }
 }
 
 // Wrapper components to handle ReactNode as titles
-function ProgressCardWithLevel({ title, level, ...props }: { title: string, level?: string } & Omit<React.ComponentProps<typeof ProgressCard>, 'title'>) {
+/* function ProgressCardWithLevel({ title, level, ...props }: { title: string, level?: string } & Omit<React.ComponentProps<typeof ProgressCard>, 'title'>) {
   // Convert the title and level to a string format that looks like a level indicator
   const titleStr = level ? `${title} (Nível ${level})` : title;
   
@@ -86,7 +148,7 @@ function ProgressCardWithLevel({ title, level, ...props }: { title: string, leve
       {...props}
     />
   );
-}
+} */
 
 export default function PainelResultados() {
   const [dateRange, setDateRange] = useState([
@@ -101,491 +163,54 @@ export default function PainelResultados() {
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null)
   const [unitsData, setUnitsData] = useState<UnitData[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [currentMetaLevel, setCurrentMetaLevel] = useState<string>("I")
-  const [metaCompleting, setMetaCompleting] = useState<boolean>(false)
-  const [updatingUnitIndex, setUpdatingUnitIndex] = useState<number | null>(null)
-  const [activeMetaLevels, setActiveMetaLevels] = useState<{[key: string]: string}>({})
   
   // Use the toast hook
   const { addToast } = useToast()
 
-  // Month names array
+  // Month names array - keep for reference but mark as unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
-  // Function to handle next meta level for summary card
-  const handleNextMetaLevel = async () => {
-    if (metaCompleting) return; // Prevent multiple clicks
-    
-    console.log(`[handleNextMetaLevel] Starting with current level ${currentMetaLevel}`);
-    
-    // Get the current month and year
-    const currentDate = dateRange[0].startDate;
-    const month = monthNames[currentDate.getMonth()];
-    const year = currentDate.getFullYear();
-    
-    setMetaCompleting(true);
-    
-    try {
-      // Call API to mark the total meta as complete
-      console.log(`[handleNextMetaLevel] Completing Total meta at level ${currentMetaLevel}`);
-      const response = await fetch('/api/dashboard/meta/complete-total', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          metaLevel: currentMetaLevel,
-          month,
-          year
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to complete meta');
-      }
-      
-      const result = await response.json();
-      console.log(`[handleNextMetaLevel] Complete meta response:`, result);
-      
-      // Update to the next meta level
-      const nextLevel = result.nextLevel;
-      console.log(`[handleNextMetaLevel] Updating to next level: ${nextLevel}`);
-      
-      // First check if there's a meta for the next level
-      const nextMetaExists = await checkMetaExists('Total', nextLevel, month, year);
-      
-      if (!nextMetaExists) {
-        // Show toast notification instead of setting error state
-        addToast({
-          title: "Atenção",
-          message: `Não existe meta de nível ${nextLevel} para Total.`,
-          type: "warning",
-          duration: 5000,
-        });
-        // Don't advance to next level as it doesn't exist
-        return;
-      }
-      
-      // Set the current meta level first
-      setCurrentMetaLevel(nextLevel);
-      
-      // Update activeMetaLevels for the Total unit
-      setActiveMetaLevels(prev => {
-        const updated = {
-          ...prev,
-          Total: nextLevel
-        };
-        console.log(`[handleNextMetaLevel] Updated active levels:`, updated);
-        return updated;
-      });
-      
-      // We need to completely refresh the data after changing the total meta level
-      console.log(`[handleNextMetaLevel] Refreshing active meta levels`);
-      await fetchActiveMetaLevels();
-      
-      // Very important: Pass the next level explicitly to ensure we fetch summary data
-      // with the correct level, not the one from state which might not be updated yet
-      console.log(`[handleNextMetaLevel] Fetching dashboard data with next level ${nextLevel}`);
-      await fetchDashboardData(nextLevel);
-      
-    } catch (err) {
-      console.error('[handleNextMetaLevel] Error completing meta:', err);
-      // Show error as toast instead of setting error state
-      addToast({
-        title: "Erro",
-        message: err instanceof Error ? err.message : 'Erro ao completar meta',
-        type: "error",
-        duration: 5000,
-      });
-    } finally {
-      setMetaCompleting(false);
-    }
-  }
-  
-  // Function to handle next meta level for a specific unit
-  const handleUnitNextMeta = async (unitName: string, currentLevel: string, unitIndex: number) => {
-    if (metaCompleting || updatingUnitIndex !== null) return; // Prevent multiple clicks
-    
-    console.log(`Starting next meta for ${unitName} with current level ${currentLevel}`);
-    
-    // Get the current month and year
-    const currentDate = dateRange[0].startDate;
-    const month = monthNames[currentDate.getMonth()];
-    const year = currentDate.getFullYear();
-    
-    setUpdatingUnitIndex(unitIndex);
-    
-    try {
-      // Call API to mark the unit meta as complete
-      console.log(`Completing meta for ${unitName} at level ${currentLevel}`);
-      const response = await fetch('/api/dashboard/meta/complete-unit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          unitName,
-          metaLevel: currentLevel,
-          month,
-          year
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to complete unit meta');
-      }
-      
-      const result = await response.json();
-      console.log(`Got response for ${unitName}:`, result);
-      
-      // Check if the next level meta exists before proceeding
-      const nextLevel = result.nextLevel;
-      const nextMetaExists = await checkMetaExists(unitName, nextLevel, month, year);
-      
-      if (!nextMetaExists) {
-        // Show a toast notification that this unit has completed all available metas
-        addToast({
-          title: "Atenção",
-          message: `Não existe meta de nível ${nextLevel} para ${unitName}.`,
-          type: "warning",
-          duration: 5000,
-        });
-        
-        // Instead of removing the unit from the UI, keep it visible with the last available level
-        // We've communicated to the user via toast about no next meta
-        return;
-      }
-      
-      if (result.hasNextMeta) {
-        // Update activeMetaLevels state with the new level
-        console.log(`${unitName} has next level: ${nextLevel}`);
-        
-        // Update the active meta levels
-        setActiveMetaLevels(prev => {
-          const updated = {
-            ...prev,
-            [unitName]: nextLevel
-          };
-          console.log(`Updated active levels:`, updated);
-          return updated;
-        });
-        
-        // Fetch data for just this unit with the next level
-        console.log(`Fetching new data for ${unitName} at level ${nextLevel}`);
-        const unitData = await fetchUnitData(unitName, nextLevel);
-        
-        if (unitData) {
-          console.log(`Received unit data:`, unitData);
-          // Create a new copy of the units array to avoid race conditions
-          const updatedUnitsData = [...unitsData];
-          
-          // Make sure we're updating the correct index in case the array changed
-          const currentUnitIndex = updatedUnitsData.findIndex(u => u.nome === unitName);
-          
-          // Use the found index if it exists, otherwise use the original index
-          const indexToUpdate = currentUnitIndex !== -1 ? currentUnitIndex : unitIndex;
-          
-          console.log(`Updating ${unitName} at index ${indexToUpdate} with level ${nextLevel}`);
-          
-          // Ensure the unit data has the correct meta level explicitly set
-          unitData.faturamento.nivel = nextLevel;
-          unitData.despesa.nivel = nextLevel;
-          unitData.inadimplencia.nivel = nextLevel;
-          
-          // Update this specific unit with next level data
-          updatedUnitsData[indexToUpdate] = unitData;
-          
-          // Set state with the new array
-          setUnitsData(updatedUnitsData);
-        } else {
-          console.error(`Failed to fetch data for ${unitName} at level ${nextLevel}`);
-          addToast({
-            title: "Erro",
-            message: `Não foi possível obter os dados para ${unitName} no nível ${nextLevel}.`,
-            type: "error",
-            duration: 3000,
-          });
-        }
-      } else {
-        console.log(`${unitName} has no next meta, showing toast notification`);
-        // Instead of removing it from the list, show a toast notification
-        addToast({
-          title: "Informação",
-          message: `${unitName} não possui mais metas para este período.`,
-          type: "info",
-          duration: 3000,
-        });
-      }
-      
-      // After processing this unit, ensure all active meta levels are in sync
-      // by fetching them again from the server
-      console.log(`Refreshing active meta levels after updating ${unitName}`);
-      const refreshedLevels = await fetchActiveMetaLevels();
-      console.log(`Refreshed levels:`, refreshedLevels);
-      
-    } catch (err) {
-      console.error('Error completing unit meta:', err);
-      addToast({
-        title: "Erro",
-        message: err instanceof Error ? err.message : 'Erro ao completar meta da unidade',
-        type: "error",
-        duration: 5000,
-      });
-    } finally {
-      setUpdatingUnitIndex(null);
-    }
-  }
-
-  // Function to check if a meta exists for a given unit, level, month and year
-  const checkMetaExists = async (unitName: string, level: string, month: string, year: number): Promise<boolean> => {
-    try {
-      // Query the API to check if a meta exists
-      const response = await fetch(`/api/dashboard/meta/check-exists?unitName=${unitName}&metaLevel=${level}&month=${month}&year=${year}`);
-      
-      if (!response.ok) {
-        console.error(`Failed to check if meta exists: ${response.status}`);
-        return false;
-      }
-      
-      const result = await response.json();
-      return result.exists;
-    } catch (error) {
-      console.error('Error checking if meta exists:', error);
-      return false;
-    }
-  }
-
-  // Function to fetch active meta levels for each unit
-  const fetchActiveMetaLevels = async () => {
-    try {
-      // Get the current month and year
-      const currentDate = dateRange[0].startDate;
-      const month = monthNames[currentDate.getMonth()];
-      const year = currentDate.getFullYear();
-      
-      // Build query params
-      const queryParams = new URLSearchParams({ 
-        month, 
-        year: year.toString()
-      });
-      
-      // Fetch active meta levels
-      const response = await fetch(`/api/dashboard/meta/active-levels?${queryParams}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch active meta levels');
-      }
-      
-      const result = await response.json();
-      console.log('Active meta levels:', result);
-      
-      setActiveMetaLevels(result);
-      
-      return result;
-    } catch (err) {
-      console.error('Error fetching active meta levels:', err);
-      return {};
-    }
-  };
-
-  // Function to fetch a single unit's data
-  const fetchUnitData = async (unitName: string, metaLevel: string) => {
-    try {
-      console.log(`[fetchUnitData] Fetching data for ${unitName} at level ${metaLevel}`);
-      
-      // Format dates for API requests
-      const startDate = dateRange[0].startDate.toISOString();
-      const endDate = dateRange[0].endDate.toISOString();
-      
-      // Build query params
-      const queryParams = new URLSearchParams({ 
-        startDate, 
-        endDate,
-        metaLevel
-      });
-      
-      // Fetch unit data
-      const response = await fetch(`/api/dashboard/units?${queryParams}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch unit data');
-      }
-      
-      const unitsResult = await response.json();
-      console.log(`[fetchUnitData] Got ${unitsResult.length} units, looking for ${unitName}`);
-      
-      // Find the unit in the results
-      const unitData = unitsResult.find((u: UnitData) => u.nome === unitName);
-      
-      if (unitData) {
-        // Set the meta level for the unit - ensure this is explicitly the requested level
-        unitData.faturamento.nivel = metaLevel;
-        unitData.despesa.nivel = metaLevel;
-        unitData.inadimplencia.nivel = metaLevel;
-        
-        console.log(`[fetchUnitData] Found ${unitName} with faturamento:`, {
-          atual: unitData.faturamento.atual,
-          meta: unitData.faturamento.meta,
-          progresso: unitData.faturamento.progresso,
-          nivel: unitData.faturamento.nivel
-        });
-      } else {
-        console.error(`[fetchUnitData] Unit ${unitName} not found in API response`);
-      }
-      
-      return unitData;
-    } catch (err) {
-      console.error(`Error fetching data for unit ${unitName}:`, err);
-      return null;
-    }
-  };
-
-  // Modified to fetch all units with their individual meta levels
-  const fetchDashboardData = async (summaryMetaLevel = currentMetaLevel) => {
+  // Fetch data from the new API endpoint
+  const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
     
-    console.log(`[fetchDashboardData] Starting with summary level ${summaryMetaLevel}`);
-    
     try {
       // Format dates for API requests
       const startDate = dateRange[0].startDate.toISOString();
       const endDate = dateRange[0].endDate.toISOString();
       
-      // Step 1: Fetch active meta levels for all units
-      console.log(`[fetchDashboardData] Fetching active meta levels`);
-      const levels = await fetchActiveMetaLevels();
-      console.log(`[fetchDashboardData] Active meta levels:`, levels);
-      
-      // Make sure the current meta level state is updated
-      if (levels.Total) {
-        console.log(`[fetchDashboardData] Updating current meta level from ${currentMetaLevel} to ${levels.Total}`);
-        setCurrentMetaLevel(levels.Total);
-      }
-      
-      // Use the explicit summary level passed in, or the Total's active level, or the current level state
-      // The explicit level takes precedence because it's used when we're specifically changing levels
-      const effectiveSummaryLevel = summaryMetaLevel || levels.Total || currentMetaLevel;
-      console.log(`[fetchDashboardData] Using effective summary level: ${effectiveSummaryLevel}`);
-      
-      // Step 2: Fetch summary data using the effective level
+      // Fetch data using the new progress API endpoint
       const queryParams = new URLSearchParams({ 
         startDate, 
-        endDate,
-        metaLevel: effectiveSummaryLevel
+        endDate
       });
       
-      console.log(`[fetchDashboardData] Fetching summary data with metaLevel=${effectiveSummaryLevel}`);
-      const summaryResponse = await fetch(`/api/dashboard/summary?${queryParams}`);
+      console.log(`Fetching progress data`);
+      const progressResponse = await fetch(`/api/dashboard/progress?${queryParams}`);
       
-      if (!summaryResponse.ok) {
-        const errorData = await summaryResponse.json();
-        throw new Error(errorData.message || 'Erro ao carregar dados do resumo');
+      if (!progressResponse.ok) {
+        const errorData = await progressResponse.json();
+        throw new Error(errorData.message || 'Erro ao carregar dados do progresso');
       }
       
-      const summaryResult = await summaryResponse.json();
-      console.log(`[fetchDashboardData] Summary data received:`, {
-        faturamento: {
-          atual: summaryResult.faturamento.atual,
-          meta: summaryResult.faturamento.meta,
-          progresso: summaryResult.faturamento.progresso
-        }
-      });
+      const progressData = await progressResponse.json();
+      console.log(`Progress data received:`, progressData);
       
-      // IMPORTANT: Force the summary data to use the effective level, regardless of what came from the API
-      // This ensures the UI displays the correct level consistently
-      summaryResult.faturamento.nivel = effectiveSummaryLevel;
-      summaryResult.faturamentoPorFuncionario.nivel = effectiveSummaryLevel;
-      summaryResult.despesa.nivel = effectiveSummaryLevel;
-      summaryResult.inadimplencia.nivel = effectiveSummaryLevel;
+      // Transform the progress data to match our state structure
+      const transformedSummary = transformSummaryData(progressData.summary);
+      setSummaryData(transformedSummary);
       
-      console.log(`[fetchDashboardData] Set summary data nivel to ${effectiveSummaryLevel}`);
-      
-      // Set summary data state
-      setSummaryData(summaryResult);
-      
-      // Step 3: Fetch units data with their individual active meta levels
-      const unitPromises = [];
-      const unitNames = Object.keys(levels).filter(name => name !== 'Total');
-      
-      console.log(`[fetchDashboardData] Fetching individual data for units:`, 
-        unitNames.map(name => `${name}: ${levels[name]}`));
-      
-      // For each unit, fetch its data with the corresponding active meta level
-      for (const unitName of unitNames) {
-        const unitLevel = levels[unitName];
-        unitPromises.push(fetchUnitData(unitName, unitLevel));
-      }
-      
-      // Wait for all unit data to be fetched
-      console.log(`[fetchDashboardData] Waiting for all unit data to be fetched`);
-      const unitResults = await Promise.all(unitPromises);
-      
-      // Filter out null results (units that couldn't be fetched)
-      const validUnitResults = unitResults.filter(unit => unit !== null) as UnitData[];
-      console.log(`[fetchDashboardData] Got ${validUnitResults.length} valid unit results`);
-      
-      // Filter out units where isComplete is true and there's no next meta
-      // This ensures we don't show units that have completed all their metas
-      const filteredUnitResults = validUnitResults.filter(unit => {
-        // Keep all units for now, we trust the API to return the correct active meta levels
-        return true;
-      });
-      
-      // Define a specific order for units
-      const unitOrder = ["Caieiras", "SP - Perus", "Francisco Morato", "Franco da Rocha", "Mairiporã"];
-      
-      // Sort units according to the custom order
-      filteredUnitResults.sort((a, b) => {
-        const indexA = unitOrder.indexOf(a.nome);
-        const indexB = unitOrder.indexOf(b.nome);
-        
-        // If both units are in the ordered list, sort by their order
-        if (indexA !== -1 && indexB !== -1) {
-          return indexA - indexB;
-        }
-        
-        // If only one unit is in the ordered list, prioritize it
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        
-        // Otherwise sort alphabetically
-        return a.nome.localeCompare(b.nome);
-      });
-      
-      // Ensure each unit has the correct nivel explicitly set from the active levels
-      filteredUnitResults.forEach(unit => {
-        const unitLevel = levels[unit.nome];
-        if (unitLevel) {
-          unit.faturamento.nivel = unitLevel;
-          unit.despesa.nivel = unitLevel;
-          unit.inadimplencia.nivel = unitLevel;
-        }
-      });
-      
-      console.log(`[fetchDashboardData] Final sorted unit data:`, filteredUnitResults.map(u => ({
-        nome: u.nome,
-        nivel: u.faturamento.nivel,
-        faturamento: {
-          atual: u.faturamento.atual,
-          meta: u.faturamento.meta,
-          progresso: u.faturamento.progresso
-        }
-      })));
-      
-      // Update state with fetched unit data
-      setUnitsData(filteredUnitResults);
+      // Transform and set units data
+      const transformedUnits = transformUnitsData(progressData.units);
+      setUnitsData(transformedUnits);
       
     } catch (err) {
-      console.error('[fetchDashboardData] Error fetching dashboard data:', err);
-      // Use toast for API errors instead of setting error state
+      console.error('Error fetching dashboard data:', err);
       addToast({
         title: "Erro",
         message: err instanceof Error ? err.message : 'Erro ao carregar dados',
@@ -598,20 +223,97 @@ export default function PainelResultados() {
     }
   };
   
+  // Transform progress data to match our summary data structure
+  const transformSummaryData = (progressSummary: ApiProgressResponse["summary"]): SummaryData => {
+    return {
+      faturamento: {
+        atual: progressSummary.faturamento.atual,
+        meta: progressSummary.faturamento.metaLevels.length > 0 
+          ? progressSummary.faturamento.metaLevels[0].valor 
+          : 0,
+        restante: progressSummary.faturamento.metaLevels.length > 0 
+          ? Math.max(0, progressSummary.faturamento.metaLevels[0].valor - progressSummary.faturamento.atual)
+          : 0,
+        progresso: progressSummary.faturamento.overallProgress,
+        metaLevels: progressSummary.faturamento.metaLevels
+      },
+      faturamentoPorFuncionario: {
+        atual: progressSummary.faturamentoPorFuncionario.atual,
+        meta: progressSummary.faturamentoPorFuncionario.metaLevels.length > 0 
+          ? progressSummary.faturamentoPorFuncionario.metaLevels[0].valor 
+          : 0,
+        restante: progressSummary.faturamentoPorFuncionario.metaLevels.length > 0 
+          ? Math.max(0, progressSummary.faturamentoPorFuncionario.metaLevels[0].valor - progressSummary.faturamentoPorFuncionario.atual)
+          : 0,
+        progresso: progressSummary.faturamentoPorFuncionario.overallProgress,
+        metaLevels: progressSummary.faturamentoPorFuncionario.metaLevels
+      },
+      despesa: {
+        atual: progressSummary.despesa.atual,
+        meta: progressSummary.despesa.metaLevels.length > 0 
+          ? progressSummary.despesa.metaLevels[0].valor 
+          : 0,
+        restante: progressSummary.despesa.metaLevels.length > 0 
+          ? progressSummary.despesa.atual - progressSummary.despesa.metaLevels[0].valor
+          : 0,
+        progresso: progressSummary.despesa.overallProgress,
+        valorReais: progressSummary.despesa.valorReais,
+        metaLevels: progressSummary.despesa.metaLevels
+      },
+      inadimplencia: {
+        atual: progressSummary.inadimplencia.atual,
+        meta: progressSummary.inadimplencia.metaLevels.length > 0 
+          ? progressSummary.inadimplencia.metaLevels[0].valor 
+          : 0,
+        restante: progressSummary.inadimplencia.metaLevels.length > 0 
+          ? progressSummary.inadimplencia.atual - progressSummary.inadimplencia.metaLevels[0].valor
+          : 0,
+        progresso: progressSummary.inadimplencia.overallProgress,
+        valorReais: progressSummary.inadimplencia.valorReais,
+        metaLevels: progressSummary.inadimplencia.metaLevels
+      },
+      totalFuncionarios: progressSummary.totalFuncionarios
+    };
+  };
+  
+  // Transform progress data to match our units data structure
+  const transformUnitsData = (units: ApiProgressResponse["units"]): UnitData[] => {
+    return units.map(unit => ({
+      nome: unit.nome,
+      faturamento: {
+        atual: unit.faturamento.atual,
+        meta: unit.faturamento.metaLevels.length > 0 
+          ? unit.faturamento.metaLevels[0].valor 
+          : 0,
+        progresso: unit.faturamento.overallProgress,
+        metaLevels: unit.faturamento.metaLevels
+      },
+      despesa: {
+        atual: unit.despesa.atual,
+        meta: unit.despesa.metaLevels.length > 0 
+          ? unit.despesa.metaLevels[0].valor 
+          : 0,
+        progresso: unit.despesa.overallProgress,
+        valorReais: unit.despesa.valorReais,
+        isNegative: true,
+        metaLevels: unit.despesa.metaLevels
+      },
+      inadimplencia: {
+        atual: unit.inadimplencia.atual,
+        meta: unit.inadimplencia.metaLevels.length > 0 
+          ? unit.inadimplencia.metaLevels[0].valor 
+          : 0,
+        progresso: unit.inadimplencia.overallProgress,
+        valorReais: unit.inadimplencia.valorReais,
+        isNegative: true,
+        metaLevels: unit.inadimplencia.metaLevels
+      }
+    }));
+  };
+  
   // Fetch data when date range changes
   useEffect(() => {
-    // Special handling for the initial load to ensure we get and use the correct Total level
-    const initializeData = async () => {
-      // First get the active levels
-      const levels = await fetchActiveMetaLevels();
-      
-      // Then use the Total level (if available) when fetching dashboard data
-      const totalLevel = levels.Total || currentMetaLevel;
-      console.log(`[initializeData] Using total level: ${totalLevel} for initial load`);
-      fetchDashboardData(totalLevel);
-    };
-    
-    initializeData();
+    fetchDashboardData();
   }, [dateRange]);
 
   // Format currency values (BRL)
@@ -632,35 +334,59 @@ export default function PainelResultados() {
   }
 
   // Handle date range change
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDateRangeChange = (ranges: any) => {
     setDateRange([ranges.selection])
   }
+
+  // New function to get remaining text based on the next incomplete meta level
+  const getRemainingText = (faturamento: { atual: number; metaLevels?: MetaLevel[] }) => {
+    if (!faturamento.metaLevels || faturamento.metaLevels.length === 0) {
+      return "Sem metas definidas";
+    }
+
+    // Helper function to convert Roman numeral to integer
+    const romanToInt = (roman: string) => {
+      const romanValues: Record<string, number> = {
+        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+        'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
+      };
+      return romanValues[roman] || 0;
+    };
+    
+    // Sort by Roman numeral order
+    const sortedMetas = [...faturamento.metaLevels].sort((a, b) => {
+      const nivelA = romanToInt(a.nivel);
+      const nivelB = romanToInt(b.nivel);
+      return nivelA - nivelB;
+    });
+
+    // Find first meta that's not completed
+    const nextMeta = sortedMetas.find(m => m.progress < 100);
+    
+    if (nextMeta) {
+      // Calculate remaining value to reach this meta
+      const remaining = Math.max(0, nextMeta.valor - faturamento.atual);
+      return `${formatCurrency(remaining)} para Meta ${nextMeta.nivel}`;
+    } else {
+      // All metas completed
+      return "Todas metas atingidas!";
+    }
+  };
 
   return (
     <div>
       <PageHeader title="Painel de resultados" />
 
       <div className="container mx-auto space-y-8 px-4 sm:px-6">
-        {/* Total Summary Section */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-semibold">Resumo total</h2>
+              <h2 className="text-2xl font-semibold">Resultado dos Indicadores de Premiação</h2>
               <p className="text-muted-foreground">Período: {formatPeriod(dateRange[0].startDate, dateRange[0].endDate)}</p>
             </div>
 
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2 bg-brand-blue bg-opacity-10 hover:bg-brand-blue hover:bg-opacity-20 hover:text-brand-blue border-brand-blue text-brand-blue"
-                onClick={handleNextMetaLevel}
-                disabled={metaCompleting}
-              >
-                <span>Próxima meta</span>
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-xs font-medium text-white">
-                  {activeMetaLevels.Total || currentMetaLevel}
-                </span>
-              </Button>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -717,45 +443,53 @@ export default function PainelResultados() {
           ) : summaryData ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Faturamento Card */}
-              <ProgressCardWithLevel
+              <ProgressCard
                 title="Faturamento"
                 value={formatCurrency(summaryData.faturamento.atual)}
                 target={formatCurrency(summaryData.faturamento.meta)}
                 progress={summaryData.faturamento.progresso}
-                remaining={`${formatCurrency(summaryData.faturamento.restante)} para a meta`}
+                overallProgress={summaryData.faturamento.progresso}
+                remaining={getRemainingText(summaryData.faturamento)}
                 isNegative={false}
+                metaLevels={summaryData.faturamento.metaLevels}
               />
 
               {/* Faturamento por funcionário Card */}
-              <ProgressCardWithLevel
+              {/*<ProgressCard
                 title="Faturamento por funcionário"
                 value={formatCurrency(summaryData.faturamentoPorFuncionario.atual)}
                 target={formatCurrency(summaryData.faturamentoPorFuncionario.meta)}
                 progress={summaryData.faturamentoPorFuncionario.progresso}
-                remaining={`${formatCurrency(summaryData.faturamentoPorFuncionario.restante)} para a meta`}
+                overallProgress={summaryData.faturamentoPorFuncionario.progresso}
+                remaining={getRemainingText(summaryData.faturamentoPorFuncionario)}
                 isNegative={false}
-              />
+                metaLevels={summaryData.faturamentoPorFuncionario.metaLevels}
+              />*/}
 
               {/* Despesa Card */}
-              <ProgressCardWithLevel
+              <ProgressCard
                 title="Despesa"
                 value={`${summaryData.despesa.atual.toFixed(2)}%`}
-                target={`Meta: ${summaryData.despesa.meta.toFixed(2)}%`}
+                target={`${summaryData.despesa.meta.toFixed(2)}%`}
                 progress={summaryData.despesa.progresso}
+                overallProgress={summaryData.despesa.progresso}
                 remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.atual > summaryData.despesa.meta ? "acima" : "abaixo"} da meta`}
                 secondaryText={formatCurrency(summaryData.despesa.valorReais)}
-                isNegative={summaryData.despesa.progresso >= 100}
+                isNegative={true}
+                metaLevels={summaryData.despesa.metaLevels}
               />
 
               {/* Inadimplência Card */}
-              <ProgressCardWithLevel
+              <ProgressCard
                 title="Inadimplência"
                 value={`${summaryData.inadimplencia.atual.toFixed(2)}%`}
-                target={`Meta: ${summaryData.inadimplencia.meta.toFixed(2)}%`}
+                target={`${summaryData.inadimplencia.meta.toFixed(2)}%`}
                 progress={summaryData.inadimplencia.progresso}
-                remaining={`${Math.abs(summaryData.inadimplencia.restante).toFixed(2)}% ${summaryData.inadimplencia.restante > 0 ? "acima" : "abaixo"} da meta`}
+                overallProgress={summaryData.inadimplencia.progresso}
+                remaining={`${Math.abs(summaryData.inadimplencia.restante).toFixed(2)}% ${summaryData.inadimplencia.atual > summaryData.inadimplencia.meta ? "acima" : "abaixo"} da meta`}
                 secondaryText={formatCurrency(summaryData.inadimplencia.valorReais)}
-                isNegative={summaryData.inadimplencia.progresso >= 100}
+                isNegative={true}
+                metaLevels={summaryData.inadimplencia.metaLevels}
               />
             </div>
           ) : (
@@ -774,8 +508,8 @@ export default function PainelResultados() {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array(6).fill(0).map((_, index) => (
-                <div 
-                  key={`unit-skeleton-${index}`} 
+                <div
+                  key={`unit-skeleton-${index}`}
                   className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 animate-pulse"
                 >
                   <div className="space-y-4">
@@ -807,52 +541,38 @@ export default function PainelResultados() {
             </div>
           ) : unitsData.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(() => {
-                // Debug logging to check all unit data
-                console.log("Units Data:", unitsData.map(u => ({ 
-                  nome: u.nome, 
-                  nivel: u.faturamento.nivel,
-                  faturamento: {
-                    atual: u.faturamento.atual,
-                    meta: u.faturamento.meta,
-                    progresso: u.faturamento.progresso
-                  }
-                })));
-                
-                return unitsData.map((unidade, index) => {
-                  // Ensure the unit has the correct meta level value
-                  const metaLevel = unidade.faturamento.nivel || currentMetaLevel;
-                  
-                  return (
+              {unitsData.map((unidade, index) => (
                     <UnitCard
                       key={`${unidade.nome}-${index}`}
-                      name={unidade.nome + (metaLevel ? ` (Nível ${metaLevel})` : '')}
-                      onNextMeta={() => handleUnitNextMeta(unidade.nome, metaLevel, index)}
-                      isLoading={updatingUnitIndex === index}
+                  name={unidade.nome}
                       faturamento={{
                         atual: formatCurrency(unidade.faturamento.atual),
                         meta: formatCurrency(unidade.faturamento.meta),
                         progresso: unidade.faturamento.progresso,
-                        isNegative: unidade.faturamento.progresso < 100
+                    isNegative: false,
+                    metaLevels: unidade.faturamento.metaLevels,
+                    overallProgress: unidade.faturamento.progresso
                       }}
                       despesa={{
                         atual: `${unidade.despesa.atual.toFixed(2)}%`,
                         meta: `${unidade.despesa.meta.toFixed(2)}%`,
                         progresso: unidade.despesa.progresso,
                         valorReais: formatCurrency(unidade.despesa.valorReais),
-                        isNegative: unidade.despesa.progresso >= 100
+                    isNegative: true,
+                    metaLevels: unidade.despesa.metaLevels,
+                    overallProgress: unidade.despesa.progresso
                       }}
                       inadimplencia={{
                         atual: `${unidade.inadimplencia.atual.toFixed(2)}%`,
                         meta: `${unidade.inadimplencia.meta.toFixed(2)}%`,
                         progresso: unidade.inadimplencia.progresso,
                         valorReais: formatCurrency(unidade.inadimplencia.valorReais),
-                        isNegative: unidade.inadimplencia.progresso >= 100
+                    isNegative: true,
+                    metaLevels: unidade.inadimplencia.metaLevels,
+                    overallProgress: unidade.inadimplencia.progresso
                       }}
                     />
-                  );
-                });
-              })()}
+              ))}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">

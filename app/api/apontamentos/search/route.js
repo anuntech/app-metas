@@ -34,7 +34,11 @@ export async function GET(request) {
       filters.metaId = searchParams.get('metaId');
     }
     
-    const result = await getApontamentosWithFiltersController(filters);
+    // Determine if we should show all entries or just the latest one per unit
+    // For the apontamento-resultados page, we want to show all entries
+    const showAllEntries = searchParams.get('showAllEntries') === 'true' || true; // Default to true for this route
+    
+    const result = await getApontamentosWithFiltersController(filters, showAllEntries);
     
     if (result.status === 200) {
       return NextResponse.json(result.data, { status: 200 });

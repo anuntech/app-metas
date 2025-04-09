@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:dashboard-api": "node scripts/test-dashboard-api.js",
+    "test:dashboard-api:generate": "node scripts/test-dashboard-api.js --generate"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
@@ -16,6 +18,7 @@
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.2.0",
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

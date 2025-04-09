@@ -17,6 +17,8 @@ export default function RootLayout({
       <head>
         <title>Sistema de Gestão</title>
         <link rel="stylesheet" href="https://use.typekit.net/xxxxxxx.css" />
+        <link rel="icon" href="/casaDoConstrutor.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/casaDoConstrutor.svg" />
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
