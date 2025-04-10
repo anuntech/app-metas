@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, isWeekend, addDays } from "date-fns"
+import { format, isWeekend, addDays, differenceInCalendarDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,6 @@ import 'react-date-range/dist/styles.css'
 import 'react-date-range/dist/theme/default.css'
 import { DateRange } from 'react-date-range'
 import { useToast } from "@/components/custom-toast"
-import Image from "next/image"
 
 // Type definitions for API responses
 type ApiProgressResponse = {
@@ -590,23 +589,19 @@ export default function PainelResultados() {
 
   return (
     <div>
-      <div className="container mx-auto space-y-8 px-4 sm:px-6">
+      <div className="container mx-auto space-y-8 px-4 sm:px-6 mt-5">
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
-              <Image 
-                src="/casaDoConstrutor.svg" 
-                alt="Casa do Construtor" 
-                width={100} 
-                height={43} 
-                className="mr-2" 
-              />
               <div>
                 <h2 className="text-2xl font-semibold">Resultado dos Indicadores de Premiação</h2>
                 <div className="flex items-center space-x-2">
                   <p className="text-muted-foreground">Período: {formatPeriod(dateRange[0].startDate, dateRange[0].endDate)}</p>
                   <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
                     {businessDays} dias úteis
+                  </span>
+                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full">
+                    {differenceInCalendarDays(dateRange[0].endDate, dateRange[0].startDate) + 1} dias corridos
                   </span>
                 </div>
               </div>
