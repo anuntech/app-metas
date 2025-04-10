@@ -8,8 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pencil, Trash2, Loader2 } from "lucide-react"
 import { AddMetaForm } from "./add-meta-form"
 import { EditMetaForm } from "./edit-meta-form"
-import { PageHeader } from "@/components/ui/page-header"
-import { useMetasContext, Meta } from "@/lib/context/MetasContext"
+import { useMetasContext } from "@/lib/context/MetasContext"
+import type { Meta } from "@/lib/context/MetasContext"
 
 export default function DefinicaoMetas() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -79,7 +79,9 @@ export default function DefinicaoMetas() {
 
   return (
     <div>
-      <PageHeader title="Definição de metas" />
+      <div className="container mx-auto py-4 mb-6">
+        <h1 className="text-2xl font-bold">Definição de metas</h1>
+      </div>
 
       <div className="container mx-auto space-y-6 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">

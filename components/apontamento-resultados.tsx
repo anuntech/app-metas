@@ -3,12 +3,11 @@
 import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Pencil, Trash2, Loader2 } from "lucide-react"
 import { AddApontamentoForm } from "./add-apontamento-form"
 import { EditApontamentoForm } from "./edit-apontamento-form"
-import { PageHeader } from "@/components/ui/page-header"
 import { useApontamentosContext, ApontamentoType } from "@/lib/context/ApontamentosContext"
 
 export default function ApontamentoResultados() {
@@ -95,7 +94,9 @@ export default function ApontamentoResultados() {
 
   return (
     <div>
-      <PageHeader title="Apontamento de resultados" />
+      <div className="container mx-auto py-4 mb-6">
+        <h1 className="text-2xl font-bold">Apontamento de resultados</h1>
+      </div>
 
       <div className="container mx-auto space-y-6 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
