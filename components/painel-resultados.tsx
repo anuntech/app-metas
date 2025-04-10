@@ -367,7 +367,9 @@ export default function PainelResultados() {
     if (nextMeta) {
       // Calculate remaining value to reach this meta
       const remaining = Math.max(0, nextMeta.valor - faturamento.atual);
-      return `${formatCurrency(remaining)} para Meta ${nextMeta.nivel}`;
+      // Check if nivel is defined before using it
+      const metaPrefix = nextMeta.nivel ? `para Meta ${nextMeta.nivel}` : "para próxima meta";
+      return `${formatCurrency(remaining)} ${metaPrefix}`;
     } else {
       // All metas completed
       return "Todas metas atingidas!";
@@ -455,7 +457,7 @@ export default function PainelResultados() {
               />
 
               {/* Faturamento por funcionário Card */}
-              {/*<ProgressCard
+              <ProgressCard
                 title="Faturamento por funcionário"
                 value={formatCurrency(summaryData.faturamentoPorFuncionario.atual)}
                 target={formatCurrency(summaryData.faturamentoPorFuncionario.meta)}
@@ -464,7 +466,7 @@ export default function PainelResultados() {
                 remaining={getRemainingText(summaryData.faturamentoPorFuncionario)}
                 isNegative={false}
                 metaLevels={summaryData.faturamentoPorFuncionario.metaLevels}
-              />*/}
+              />
 
               {/* Despesa Card */}
               <ProgressCard
@@ -473,7 +475,7 @@ export default function PainelResultados() {
                 target={`${summaryData.despesa.meta.toFixed(2)}%`}
                 progress={summaryData.despesa.progresso}
                 overallProgress={summaryData.despesa.progresso}
-                remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.atual > summaryData.despesa.meta ? "acima" : "abaixo"} da meta`}
+                remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.atual > summaryData.despesa.meta ? "abaixo" : "acima"} da meta`}
                 secondaryText={formatCurrency(summaryData.despesa.valorReais)}
                 isNegative={true}
                 metaLevels={summaryData.despesa.metaLevels}
@@ -486,7 +488,7 @@ export default function PainelResultados() {
                 target={`${summaryData.inadimplencia.meta.toFixed(2)}%`}
                 progress={summaryData.inadimplencia.progresso}
                 overallProgress={summaryData.inadimplencia.progresso}
-                remaining={`${Math.abs(summaryData.inadimplencia.restante).toFixed(2)}% ${summaryData.inadimplencia.atual > summaryData.inadimplencia.meta ? "acima" : "abaixo"} da meta`}
+                remaining={`${Math.abs(summaryData.inadimplencia.restante).toFixed(2)}% ${summaryData.inadimplencia.atual > summaryData.inadimplencia.meta ? "abaixo" : "acima"} da meta`}
                 secondaryText={formatCurrency(summaryData.inadimplencia.valorReais)}
                 isNegative={true}
                 metaLevels={summaryData.inadimplencia.metaLevels}

@@ -1,6 +1,6 @@
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
-import { MultiLevelProgress } from "@/components/ui/multi-level-progress"
+import { SummaryMultiLevelProgress } from "@/components/ui/summary-multi-level-progress"
 
 type MetaLevel = {
   nivel: string;
@@ -65,26 +65,32 @@ export function ProgressCard({
       return nivelA - nivelB;
     });
     
+    // Helper function to format meta level text
+    const formatMetaLevelText = (nivel: string | undefined, valor: number) => {
+      const metaPrefix = nivel ? `Meta ${nivel}` : "Próxima meta";
+      return `${metaPrefix}: ${formatValueBasedOnType(valor, value)}`;
+    };
+
     // For metrics where higher is better (not negative)
     if (!isNegative) {
       // Find first meta that's not completed
       const nextMeta = sortedMetas.find(m => m.progress < 100);
       if (nextMeta) {
-        return `Meta ${nextMeta.nivel}: ${formatValueBasedOnType(nextMeta.valor, value)}`;
+        return formatMetaLevelText(nextMeta.nivel, nextMeta.valor);
       }
       // If all metas completed, show the highest one
       const highestMeta = sortedMetas[sortedMetas.length - 1];
-      return `Meta ${highestMeta.nivel}: ${formatValueBasedOnType(highestMeta.valor, value)} ✓`;
+      return `${formatMetaLevelText(highestMeta.nivel, highestMeta.valor)} ✓`;
     }
     // For metrics where lower is better (negative like despesa)
     // Find first meta that's not completed
     const nextMeta = sortedMetas.find(m => m.progress < 100);
     if (nextMeta) {
-      return `Meta ${nextMeta.nivel}: ${formatValueBasedOnType(nextMeta.valor, value)}`;
+      return formatMetaLevelText(nextMeta.nivel, nextMeta.valor);
     }
     // If all metas completed, show the lowest one
     const lowestMeta = sortedMetas[sortedMetas.length - 1];
-    return `Meta ${lowestMeta.nivel}: ${formatValueBasedOnType(lowestMeta.valor, value)} ✓`;
+    return `${formatMetaLevelText(lowestMeta.nivel, lowestMeta.valor)} ✓`;
   };
   
   // Format the value based on the type (percentage or currency)
@@ -167,9 +173,9 @@ export function ProgressCard({
         
         {useMultiLevel ? (
           // Multi-level progress bar display
-          <MultiLevelProgress
+          <SummaryMultiLevelProgress
             metaLevels={metaLevels}
-            overallProgress={overallProgress || 0}
+            overallProgress={overallProgress !== undefined ? overallProgress : progress}
             isReversed={isNegative}
             colorScheme={getColorScheme()}
             className="mt-2"

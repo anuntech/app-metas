@@ -146,6 +146,50 @@ export async function GET(request) {
         totalActual, 
         totalFuncionarios
       );
+      
+      // Add debug logs for Total Faturamento
+      console.log('=== FATURAMENTO TOTAL DEBUG INFO ===');
+      
+      // Log apontamento data
+      console.log('APONTAMENTO:', {
+        faturamento: totalActual.faturamento.atual.toLocaleString('pt-BR'),
+        despesa: totalActual.despesa.atual.toFixed(2) + '%',
+        inadimplencia: totalActual.inadimplencia.atual.toFixed(2) + '%'
+      });
+      
+      // Log meta levels
+      console.log('META LEVELS:');
+      totalMetas.forEach(meta => {
+        console.log(`Nivel ${meta.nivel}: Faturamento ${meta.faturamento.toLocaleString('pt-BR')}, Despesa ${meta.despesa}%, Inadimplencia ${meta.inadimplencia}%`);
+      });
+      
+      // Log progress for each metric
+      console.log('PROGRESS:');
+      console.log('Faturamento:', {
+        overallProgress: progressData.summary.faturamento.overallProgress + '%',
+        metaLevels: progressData.summary.faturamento.metaLevels.map(m => ({ 
+          nivel: m.nivel, 
+          valor: m.valor.toLocaleString('pt-BR'), 
+          progress: m.progress + '%' 
+        }))
+      });
+      console.log('Despesa:', {
+        overallProgress: progressData.summary.despesa.overallProgress + '%',
+        metaLevels: progressData.summary.despesa.metaLevels.map(m => ({ 
+          nivel: m.nivel, 
+          valor: m.valor.toFixed(2) + '%', 
+          progress: m.progress + '%' 
+        }))
+      });
+      console.log('Inadimplencia:', {
+        overallProgress: progressData.summary.inadimplencia.overallProgress + '%',
+        metaLevels: progressData.summary.inadimplencia.metaLevels.map(m => ({ 
+          nivel: m.nivel, 
+          valor: m.valor.toFixed(2) + '%', 
+          progress: m.progress + '%' 
+        }))
+      });
+      console.log('=== END FATURAMENTO TOTAL DEBUG INFO ===');
     }
     
     // Calculate progress for each individual unit
@@ -169,52 +213,7 @@ export async function GET(request) {
         unitFuncionarios
       );
       
-      // Add debug logs for Caieiras
-      if (unit === 'Caieiras') {
-        console.log('=== CAIEIRAS DEBUG INFO ===');
-        
-        // Log apontamento data
-        console.log('APONTAMENTO:', {
-          faturamento: unitActual.faturamento.atual.toLocaleString('pt-BR'),
-          despesa: unitActual.despesa.atual.toFixed(2) + '%',
-          inadimplencia: unitActual.inadimplencia.atual.toFixed(2) + '%'
-        });
-        
-        // Log meta levels
-        console.log('META LEVELS:');
-        unitMetaList.forEach(meta => {
-          console.log(`Nivel ${meta.nivel}: Faturamento ${meta.faturamento.toLocaleString('pt-BR')}, Despesa ${meta.despesa}%, Inadimplencia ${meta.inadimplencia}%`);
-        });
-        
-        // Log progress for each metric
-        console.log('PROGRESS:');
-        console.log('Faturamento:', {
-          overallProgress: unitProgress.faturamento.overallProgress + '%',
-          metaLevels: unitProgress.faturamento.metaLevels.map(m => ({ 
-            nivel: m.nivel, 
-            valor: m.valor.toLocaleString('pt-BR'), 
-            progress: m.progress + '%' 
-          }))
-        });
-        console.log('Despesa:', {
-          overallProgress: unitProgress.despesa.overallProgress + '%',
-          metaLevels: unitProgress.despesa.metaLevels.map(m => ({ 
-            nivel: m.nivel, 
-            valor: m.valor.toFixed(2) + '%', 
-            progress: m.progress + '%' 
-          }))
-        });
-        console.log('Inadimplencia:', {
-          overallProgress: unitProgress.inadimplencia.overallProgress + '%',
-          metaLevels: unitProgress.inadimplencia.metaLevels.map(m => ({ 
-            nivel: m.nivel, 
-            valor: m.valor.toFixed(2) + '%', 
-            progress: m.progress + '%' 
-          }))
-        });
-        console.log('=== END CAIEIRAS DEBUG INFO ===');
-      }
-      
+      // Add to the units array
       progressData.units.push(unitProgress);
     }
     
@@ -253,14 +252,30 @@ function calculateProgressForUnit(unitName, metaList, actualData, totalFuncionar
   const faturamentoActual = actualData.faturamento.atual;
   const faturamentoProgress = calculateMetricProgress(faturamentoActual, metaList, 'faturamento', false);
   
+  // Create meta levels for faturamento por funcionario based on faturamento and funcionarios
+  const faturamentoPorFuncionarioMetas = metaList.map(meta => {
+    const faturamentoPorFunc = meta.funcionarios > 0 ? meta.faturamento / meta.funcionarios : 0;
+    return {
+      ...meta,
+      faturamentoPorFuncionario: faturamentoPorFunc,
+      nivel: meta.nivel // Explicitly copy nivel to ensure it's defined
+    };
+  });
+  
+  // Add debug info for faturamentoPorFuncionario metas if Total unit
+  if (unitName === 'Total') {
+    console.log('=== FATURAMENTO POR FUNCIONARIO META LEVELS ===');
+    faturamentoPorFuncionarioMetas.forEach(meta => {
+      console.log(`Nivel ${meta.nivel}: Faturamento por funcionário ${meta.faturamentoPorFuncionario.toLocaleString('pt-BR')}`);
+    });
+    console.log('=== END FATURAMENTO POR FUNCIONARIO META LEVELS ===');
+  }
+  
   // Calculate faturamento por funcionario progress
-  const faturamentoPorFuncionarioActual = faturamentoActual / totalFuncionarios;
+  const faturamentoPorFuncionarioActual = totalFuncionarios > 0 ? faturamentoActual / totalFuncionarios : 0;
   const faturamentoPorFuncionarioProgress = calculateMetricProgress(
     faturamentoPorFuncionarioActual,
-    metaList.map(meta => ({
-      ...meta,
-      faturamentoPorFuncionario: meta.faturamento / meta.funcionarios
-    })),
+    faturamentoPorFuncionarioMetas,
     'faturamentoPorFuncionario',
     false
   );
@@ -303,8 +318,8 @@ function calculateProgressForUnit(unitName, metaList, actualData, totalFuncionar
  * For metrics like despesa and inadimplencia, lower values are better (isReversed=true)
  */
 function calculateMetricProgress(actualValue, metaList, metricName, isReversed) {
-  // Debug info for Caieiras
-  const isDebugging = metricName && metaList.some(meta => meta.unidade === 'Caieiras');
+  // Debug info for Total (rather than Caieiras)
+  const isDebugging = metricName && metaList.some(meta => meta.unidade === 'Total');
   
   if (isDebugging) {
     console.log(`\nCALCULATING PROGRESS FOR: ${metricName} (${isReversed ? 'reversed' : 'normal'})`);
@@ -434,7 +449,7 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
       }
       
       metaProgresses.push({
-        nivel: sortedMetas[i].nivel,
+        nivel: sortedMetas[i].nivel || `${i + 1}`,
         valor: targetValue,
         progress: Math.round(progress)
       });
@@ -506,7 +521,7 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
       }
       
       metaProgresses.push({
-        nivel: sortedMetas[i].nivel,
+        nivel: sortedMetas[i].nivel || `${i + 1}`,
         valor: targetValue,
         progress: Math.round(progress)
       });
@@ -530,25 +545,31 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
       overallProgress = 100;
     } else {
       // We've completed all levels before this one
-      const levelProgressPercent = firstIncompleteLevelIndex / totalLevels * 100;
+      const levelSegmentSize = 100 / totalLevels;
       
-      // The current level's contribution is its progress percentage 
-      // of its proportion of the total
-      const currentLevelMaxContribution = 100 / totalLevels;
+      // Calculate progress within the current segment
+      const completedSegments = firstIncompleteLevelIndex;
+      const completedProgress = completedSegments * levelSegmentSize;
+      
+      // Calculate progress within the current segment
       const currentLevelProgress = metaProgresses[firstIncompleteLevelIndex].progress;
-      const currentLevelContribution = (currentLevelProgress / 100) * currentLevelMaxContribution;
       
-      // Overall progress is the sum of completed levels plus current level's contribution
-      overallProgress = levelProgressPercent + currentLevelContribution;
+      // Scale current level progress to stay within its segment
+      // This ensures we don't cross the next level line unless the progress is 100%
+      const currentSegmentProgress = (currentLevelProgress / 100) * levelSegmentSize;
+      
+      // Overall progress is the sum of completed segments plus current segment's contribution
+      overallProgress = completedProgress + currentSegmentProgress;
       
       if (isDebugging) {
         console.log(`\nNew overall progress calculation (first incomplete level):`);
         console.log(`  Total levels: ${totalLevels}`);
         console.log(`  First incomplete level index: ${firstIncompleteLevelIndex} (${sortedMetas[firstIncompleteLevelIndex].nivel})`);
-        console.log(`  Level progress percent: ${levelProgressPercent.toFixed(2)}%`);
-        console.log(`  Current level max contribution: ${currentLevelMaxContribution.toFixed(2)}%`);
+        console.log(`  Level segment size: ${levelSegmentSize.toFixed(2)}%`);
+        console.log(`  Completed segments: ${completedSegments}`);
+        console.log(`  Completed progress: ${completedProgress.toFixed(2)}%`);
         console.log(`  Current level progress: ${currentLevelProgress}%`);
-        console.log(`  Current level contribution: ${currentLevelContribution.toFixed(2)}%`);
+        console.log(`  Current segment progress: ${currentSegmentProgress.toFixed(2)}%`);
         console.log(`  New overall progress: ${overallProgress.toFixed(2)}%`);
       }
     }

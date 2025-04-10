@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -10,25 +9,23 @@ type MetaLevel = {
   progress: number;
 };
 
-type MultiLevelProgressProps = {
+type SummaryMultiLevelProgressProps = {
   metaLevels: MetaLevel[];
   overallProgress: number;
   isReversed?: boolean;
   colorScheme?: "blue" | "green" | "red" | "yellow";
   showLevelLabels?: boolean;
-  height?: "sm" | "md" | "lg";
   className?: string;
 };
 
-export function MultiLevelProgress({
+export function SummaryMultiLevelProgress({
   metaLevels,
   overallProgress,
   isReversed = false,
   colorScheme = "blue",
   showLevelLabels = true,
-  height = "md",
   className,
-}: MultiLevelProgressProps) {
+}: SummaryMultiLevelProgressProps) {
   // Sort levels by Roman numeral order
   const sortedLevels = [...metaLevels].sort((a, b) => {
     const romanToInt = (s: string) => {
@@ -45,42 +42,35 @@ export function MultiLevelProgress({
     colorScheme === "red" ? "bg-red-500" : 
     "bg-yellow-500";
 
-  // Get height class
-  const heightClass = 
-    height === "sm" ? "h-2" :
-    height === "lg" ? "h-6" :
-    "h-4";
-
-  // Calculate segment size
-  const segmentSize = sortedLevels.length > 0 ? 100 / sortedLevels.length : 100;
-
   // If no levels, return empty bar
   if (!sortedLevels.length) {
     return <div className={cn("w-full h-2 bg-gray-200 rounded", className)}></div>;
   }
 
+  // Calculate the step size - each level gets an equal portion of the bar
+  const stepSize = 100 / sortedLevels.length;
+
   return (
     <div className="space-y-2">
-      {/* Simple progress bar - one continuous bar with level markers */}
-      <div className={cn("relative w-full bg-gray-200 rounded", heightClass, className)}>
-        {/* Overall progress bar */}
+      {/* Progress bar with fixed segment sizes */}
+      <div className={cn("relative w-full h-2 bg-gray-200 rounded", className)}>
+        {/* The filled progress section */}
         <div 
           className={cn("absolute left-0 top-0 bottom-0 rounded-l", colorClass)}
           style={{ width: `${Math.min(100, overallProgress)}%` }}
         />
 
-        {/* Level markers */}
+        {/* Segment dividers */}
         {sortedLevels.map((level, index) => {
-          if (index === 0) return null; // Skip first level marker
+          if (index === 0) return null; // Skip first divider
           
-          // Calculate position as percentage based on the segment size
-          // Each level gets equal space, so divide 100% by number of levels
-          const position = segmentSize * index;
+          // Each divider is at a fixed percentage point
+          const position = stepSize * index; 
           
           return (
             <div 
-              key={`marker-${index}-${level.nivel || 'divider'}`}
-              className="absolute top-0 bottom-0 w-1 bg-white"
+              key={`divider-${index}`}
+              className="absolute top-0 bottom-0 w-0.5 bg-white"
               style={{ left: `${position}%` }}
             />
           );
