@@ -79,10 +79,6 @@ export default function DefinicaoMetas() {
 
   return (
     <div>
-      <div className="container mx-auto py-4 mb-6">
-        <h1 className="text-2xl font-bold">Definição de metas</h1>
-      </div>
-
       <div className="container mx-auto space-y-6 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div className="w-full sm:w-64 relative">
