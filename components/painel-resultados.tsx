@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format } from "date-fns"
+import { format, isWeekend, differenceInCalendarDays, addDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -173,6 +173,76 @@ export default function PainelResultados() {
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
+
+  // Calculate the number of business days in the selected period
+  const calculateBusinessDays = (startDate: Date, endDate: Date) => {
+    // Brazilian holidays for 2024 and 2025
+    const holidays = [
+      // 2024 holidays
+      new Date(2024, 0, 1),  // New Year's Day
+      new Date(2024, 1, 12), // Carnival Monday
+      new Date(2024, 1, 13), // Carnival Tuesday
+      new Date(2024, 1, 14), // Ash Wednesday
+      new Date(2024, 2, 29), // Good Friday
+      new Date(2024, 3, 21), // Tiradentes Day
+      new Date(2024, 4, 1),  // Labor Day
+      new Date(2024, 4, 30), // Corpus Christi
+      new Date(2024, 8, 7),  // Independence Day
+      new Date(2024, 9, 12), // Our Lady of Aparecida
+      new Date(2024, 10, 2), // All Souls' Day
+      new Date(2024, 10, 15), // Republic Proclamation Day
+      new Date(2024, 11, 25), // Christmas Day
+      
+      // 2025 holidays
+      new Date(2025, 0, 1),  // New Year's Day
+      new Date(2025, 2, 3),  // Carnival Monday
+      new Date(2025, 2, 4),  // Carnival Tuesday
+      new Date(2025, 2, 5),  // Ash Wednesday
+      new Date(2025, 3, 18), // Good Friday
+      new Date(2025, 3, 21), // Tiradentes Day
+      new Date(2025, 4, 1),  // Labor Day
+      new Date(2025, 5, 19), // Corpus Christi
+      new Date(2025, 8, 7),  // Independence Day
+      new Date(2025, 9, 12), // Our Lady of Aparecida
+      new Date(2025, 10, 2), // All Souls' Day
+      new Date(2025, 10, 15), // Republic Proclamation Day
+      new Date(2025, 11, 25), // Christmas Day
+      
+      // 2026 holidays
+      new Date(2026, 0, 1),  // New Year's Day
+      new Date(2026, 1, 16), // Carnival Monday
+      new Date(2026, 1, 17), // Carnival Tuesday
+      new Date(2026, 1, 18), // Ash Wednesday
+      new Date(2026, 3, 3),  // Good Friday
+      new Date(2026, 3, 21), // Tiradentes Day
+      new Date(2026, 4, 1),  // Labor Day
+    ];
+
+    // Check if a date is a holiday
+    const isHoliday = (date: Date) => {
+      return holidays.some(holiday => 
+        holiday.getDate() === date.getDate() && 
+        holiday.getMonth() === date.getMonth() && 
+        holiday.getFullYear() === date.getFullYear()
+      );
+    };
+
+    // Count business days
+    let businessDays = 0;
+    let currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      if (!isWeekend(currentDate) && !isHoliday(currentDate)) {
+        businessDays++;
+      }
+      currentDate = addDays(currentDate, 1);
+    }
+
+    return businessDays;
+  };
+
+  // Get the business days count for the selected period
+  const businessDays = calculateBusinessDays(dateRange[0].startDate, dateRange[0].endDate);
 
   // Fetch data from the new API endpoint
   const fetchDashboardData = async () => {
@@ -385,7 +455,12 @@ export default function PainelResultados() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h2 className="text-2xl font-semibold">Resultado dos Indicadores de Premiação</h2>
-              <p className="text-muted-foreground">Período: {formatPeriod(dateRange[0].startDate, dateRange[0].endDate)}</p>
+              <div className="flex items-center space-x-2">
+                <p className="text-muted-foreground">Período: {formatPeriod(dateRange[0].startDate, dateRange[0].endDate)}</p>
+                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
+                  {businessDays} dias úteis
+                </span>
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -476,7 +551,6 @@ export default function PainelResultados() {
                 progress={summaryData.despesa.progresso}
                 overallProgress={summaryData.despesa.progresso}
                 remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.atual > summaryData.despesa.meta ? "abaixo" : "acima"} da meta`}
-                secondaryText={formatCurrency(summaryData.despesa.valorReais)}
                 isNegative={true}
                 metaLevels={summaryData.despesa.metaLevels}
               />
@@ -489,7 +563,6 @@ export default function PainelResultados() {
                 progress={summaryData.inadimplencia.progresso}
                 overallProgress={summaryData.inadimplencia.progresso}
                 remaining={`${Math.abs(summaryData.inadimplencia.restante).toFixed(2)}% ${summaryData.inadimplencia.atual > summaryData.inadimplencia.meta ? "abaixo" : "acima"} da meta`}
-                secondaryText={formatCurrency(summaryData.inadimplencia.valorReais)}
                 isNegative={true}
                 metaLevels={summaryData.inadimplencia.metaLevels}
               />
