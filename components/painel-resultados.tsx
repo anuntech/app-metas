@@ -154,7 +154,7 @@ export default function PainelResultados() {
   const [dateRange, setDateRange] = useState([
     {
       startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
+      endDate: new Date(),
       key: 'selection'
     }
   ])
@@ -446,6 +446,51 @@ export default function PainelResultados() {
     }
   };
 
+  // Function to get remaining text for reversed metrics like despesa and inadimplência
+  const getReversedRemainingText = (metric: { atual: number; meta: number; restante: number; metaLevels?: MetaLevel[] }) => {
+    if (!metric.metaLevels || metric.metaLevels.length === 0) {
+      // If no meta levels, use simple comparison with meta value
+      const isGood = metric.atual <= metric.meta;
+      return `${Math.abs(metric.restante).toFixed(2)}% ${isGood ? "abaixo" : "acima"} da meta`;
+    }
+
+    // Helper function to convert Roman numeral to integer
+    const romanToInt = (roman: string) => {
+      const romanValues: Record<string, number> = {
+        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+        'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
+      };
+      return romanValues[roman] || 0;
+    };
+    
+    // Sort by Roman numeral order
+    const sortedMetas = [...metric.metaLevels].sort((a, b) => {
+      const nivelA = romanToInt(a.nivel);
+      const nivelB = romanToInt(b.nivel);
+      return nivelA - nivelB;
+    });
+
+    // Find first meta that's not completed
+    const nextMeta = sortedMetas.find(m => m.progress < 100);
+    
+    if (nextMeta) {
+      // For uncompleted metas, show difference between actual and target
+      const difference = Math.abs(metric.atual - nextMeta.valor).toFixed(2);
+      const isGood = metric.atual <= nextMeta.valor;
+      const metaPrefix = nextMeta.nivel ? `Meta ${nextMeta.nivel}` : "próxima meta";
+      return `${difference}% ${isGood ? "abaixo" : "acima"} da ${metaPrefix}`;
+    } else if (sortedMetas.length > 0) {
+      // All metas completed - compare with best meta (the last one for reversed metrics)
+      const bestMeta = sortedMetas[sortedMetas.length - 1];
+      const difference = Math.abs(metric.atual - bestMeta.valor).toFixed(2);
+      const isGood = metric.atual <= bestMeta.valor;
+      return `${difference}% ${isGood ? "abaixo" : "acima"} da meta ${bestMeta.nivel}`;
+    } else {
+      // Fallback case
+      return `${Math.abs(metric.restante).toFixed(2)}% da meta`;
+    }
+  };
+
   return (
     <div>
       <PageHeader title="Painel de resultados" />
@@ -550,7 +595,8 @@ export default function PainelResultados() {
                 target={`${summaryData.despesa.meta.toFixed(2)}%`}
                 progress={summaryData.despesa.progresso}
                 overallProgress={summaryData.despesa.progresso}
-                remaining={`${Math.abs(summaryData.despesa.restante).toFixed(2)}% ${summaryData.despesa.atual > summaryData.despesa.meta ? "abaixo" : "acima"} da meta`}
+                remaining={getReversedRemainingText(summaryData.despesa)}
+                // secondaryText={formatCurrency(summaryData.despesa.valorReais)}
                 isNegative={true}
                 metaLevels={summaryData.despesa.metaLevels}
               />
@@ -562,7 +608,8 @@ export default function PainelResultados() {
                 target={`${summaryData.inadimplencia.meta.toFixed(2)}%`}
                 progress={summaryData.inadimplencia.progresso}
                 overallProgress={summaryData.inadimplencia.progresso}
-                remaining={`${Math.abs(summaryData.inadimplencia.restante).toFixed(2)}% ${summaryData.inadimplencia.atual > summaryData.inadimplencia.meta ? "abaixo" : "acima"} da meta`}
+                remaining={getReversedRemainingText(summaryData.inadimplencia)}
+                // secondaryText={formatCurrency(summaryData.inadimplencia.valorReais)}
                 isNegative={true}
                 metaLevels={summaryData.inadimplencia.metaLevels}
               />
