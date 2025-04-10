@@ -59,18 +59,43 @@ export async function GET(request) {
       unitMetas[unit].sort((a, b) => a.faturamento - b.faturamento);
     }
     
-    // Create a more flexible date range query - find all apontamentos within the month
-    const monthStart = new Date(year, start.getMonth(), 1);
-    const monthEnd = new Date(year, start.getMonth() + 1, 0, 23, 59, 59, 999);
-    
-    // Get all apontamentos within the month
+    // FIXED: Use the exact date range selected by the user instead of the whole month
+    // The query now checks for overlapping date ranges between apontamentos and selected period
     const apontamentosQuery = {
-      dataInicio: { $gte: monthStart },
-      dataFim: { $lte: monthEnd }
+      $or: [
+        // Case 1: apontamento completely contains the selected period
+        { 
+          dataInicio: { $lte: start },
+          dataFim: { $gte: end }
+        },
+        // Case 2: selected period completely contains the apontamento
+        {
+          dataInicio: { $gte: start, $lte: end },
+          dataFim: { $gte: start, $lte: end }
+        },
+        // Case 3: apontamento starts before but ends during selected period
+        {
+          dataInicio: { $lt: start },
+          dataFim: { $gte: start, $lte: end }
+        },
+        // Case 4: apontamento starts during but ends after selected period
+        {
+          dataInicio: { $gte: start, $lte: end },
+          dataFim: { $gt: end }
+        }
+      ]
     };
+    
+    console.log('Date filter:', {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      query: JSON.stringify(apontamentosQuery)
+    });
     
     // Get all apontamentos matching the filter, sorted by updatedAt in descending order
     const allApontamentos = await Apontamento.find(apontamentosQuery).sort({ updatedAt: -1 });
+    
+    console.log(`Found ${allApontamentos.length} apontamentos overlapping with selected period`);
     
     // Create a map to store only the latest apontamento for each unit
     const latestApontamentosByUnit = new Map();
@@ -80,6 +105,12 @@ export async function GET(request) {
       if (!latestApontamentosByUnit.has(apt.unidade)) {
         latestApontamentosByUnit.set(apt.unidade, apt);
       }
+    });
+    
+    // Log the selected apontamentos for debugging
+    console.log('Selected apontamentos:');
+    latestApontamentosByUnit.forEach((apt, unit) => {
+      console.log(`Unit: ${unit}, Period: ${apt.periodo}, Data: ${apt.dataInicio} to ${apt.dataFim}`);
     });
     
     // Replace simulated data with actual apontamentos data
@@ -354,9 +385,6 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
       console.log(`  Level ${meta.nivel}: ${getMetricValue(meta)}`);
     });
   }
-  
-  // Get meta values in the right order
-  const metaValues = sortedMetas.map(meta => getMetricValue(meta));
   
   // Calculate the progress for each meta level
   const metaProgresses = [];

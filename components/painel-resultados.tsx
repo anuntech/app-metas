@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, isWeekend, differenceInCalendarDays, addDays } from "date-fns"
+import { format, isWeekend, addDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -295,90 +295,177 @@ export default function PainelResultados() {
   
   // Transform progress data to match our summary data structure
   const transformSummaryData = (progressSummary: ApiProgressResponse["summary"]): SummaryData => {
+    // Ensure the summary data exists
+    if (!progressSummary) {
+      console.error('Invalid or empty summary data');
+      return {
+        faturamento: {
+          atual: 0,
+          meta: 0,
+          restante: 0,
+          progresso: 0,
+          metaLevels: []
+        },
+        faturamentoPorFuncionario: {
+          atual: 0,
+          meta: 0,
+          restante: 0,
+          progresso: 0,
+          metaLevels: []
+        },
+        despesa: {
+          atual: 0,
+          meta: 0,
+          restante: 0,
+          progresso: 0,
+          valorReais: 0,
+          metaLevels: []
+        },
+        inadimplencia: {
+          atual: 0,
+          meta: 0,
+          restante: 0,
+          progresso: 0,
+          valorReais: 0,
+          metaLevels: []
+        },
+        totalFuncionarios: 0
+      };
+    }
+
+    // Create default structure to handle missing properties
+    const defaultMetrics = {
+      atual: 0,
+      overallProgress: 0,
+      metaLevels: []
+    };
+    
+    // Safely access faturamento or use default
+    const faturamento = progressSummary.faturamento || defaultMetrics;
+    const faturamentoPorFuncionario = progressSummary.faturamentoPorFuncionario || defaultMetrics;
+    
+    // Safely access despesa or use default with valorReais
+    const despesa = progressSummary.despesa || {...defaultMetrics, valorReais: 0};
+    const inadimplencia = progressSummary.inadimplencia || {...defaultMetrics, valorReais: 0};
+
     return {
       faturamento: {
-        atual: progressSummary.faturamento.atual,
-        meta: progressSummary.faturamento.metaLevels.length > 0 
-          ? progressSummary.faturamento.metaLevels[0].valor 
+        atual: faturamento.atual,
+        meta: faturamento.metaLevels && faturamento.metaLevels.length > 0 
+          ? faturamento.metaLevels[0].valor 
           : 0,
-        restante: progressSummary.faturamento.metaLevels.length > 0 
-          ? Math.max(0, progressSummary.faturamento.metaLevels[0].valor - progressSummary.faturamento.atual)
+        restante: faturamento.metaLevels && faturamento.metaLevels.length > 0 
+          ? Math.max(0, faturamento.metaLevels[0].valor - faturamento.atual)
           : 0,
-        progresso: progressSummary.faturamento.overallProgress,
-        metaLevels: progressSummary.faturamento.metaLevels
+        progresso: faturamento.overallProgress,
+        metaLevels: faturamento.metaLevels || []
       },
       faturamentoPorFuncionario: {
-        atual: progressSummary.faturamentoPorFuncionario.atual,
-        meta: progressSummary.faturamentoPorFuncionario.metaLevels.length > 0 
-          ? progressSummary.faturamentoPorFuncionario.metaLevels[0].valor 
+        atual: faturamentoPorFuncionario.atual,
+        meta: faturamentoPorFuncionario.metaLevels && faturamentoPorFuncionario.metaLevels.length > 0 
+          ? faturamentoPorFuncionario.metaLevels[0].valor 
           : 0,
-        restante: progressSummary.faturamentoPorFuncionario.metaLevels.length > 0 
-          ? Math.max(0, progressSummary.faturamentoPorFuncionario.metaLevels[0].valor - progressSummary.faturamentoPorFuncionario.atual)
+        restante: faturamentoPorFuncionario.metaLevels && faturamentoPorFuncionario.metaLevels.length > 0 
+          ? Math.max(0, faturamentoPorFuncionario.metaLevels[0].valor - faturamentoPorFuncionario.atual)
           : 0,
-        progresso: progressSummary.faturamentoPorFuncionario.overallProgress,
-        metaLevels: progressSummary.faturamentoPorFuncionario.metaLevels
+        progresso: faturamentoPorFuncionario.overallProgress,
+        metaLevels: faturamentoPorFuncionario.metaLevels || []
       },
       despesa: {
-        atual: progressSummary.despesa.atual,
-        meta: progressSummary.despesa.metaLevels.length > 0 
-          ? progressSummary.despesa.metaLevels[0].valor 
+        atual: despesa.atual,
+        meta: despesa.metaLevels && despesa.metaLevels.length > 0 
+          ? despesa.metaLevels[0].valor 
           : 0,
-        restante: progressSummary.despesa.metaLevels.length > 0 
-          ? progressSummary.despesa.atual - progressSummary.despesa.metaLevels[0].valor
+        restante: despesa.metaLevels && despesa.metaLevels.length > 0 
+          ? despesa.atual - despesa.metaLevels[0].valor
           : 0,
-        progresso: progressSummary.despesa.overallProgress,
-        valorReais: progressSummary.despesa.valorReais,
-        metaLevels: progressSummary.despesa.metaLevels
+        progresso: despesa.overallProgress,
+        valorReais: despesa.valorReais || 0,
+        metaLevels: despesa.metaLevels || []
       },
       inadimplencia: {
-        atual: progressSummary.inadimplencia.atual,
-        meta: progressSummary.inadimplencia.metaLevels.length > 0 
-          ? progressSummary.inadimplencia.metaLevels[0].valor 
+        atual: inadimplencia.atual,
+        meta: inadimplencia.metaLevels && inadimplencia.metaLevels.length > 0 
+          ? inadimplencia.metaLevels[0].valor 
           : 0,
-        restante: progressSummary.inadimplencia.metaLevels.length > 0 
-          ? progressSummary.inadimplencia.atual - progressSummary.inadimplencia.metaLevels[0].valor
+        restante: inadimplencia.metaLevels && inadimplencia.metaLevels.length > 0 
+          ? inadimplencia.atual - inadimplencia.metaLevels[0].valor
           : 0,
-        progresso: progressSummary.inadimplencia.overallProgress,
-        valorReais: progressSummary.inadimplencia.valorReais,
-        metaLevels: progressSummary.inadimplencia.metaLevels
+        progresso: inadimplencia.overallProgress,
+        valorReais: inadimplencia.valorReais || 0,
+        metaLevels: inadimplencia.metaLevels || []
       },
-      totalFuncionarios: progressSummary.totalFuncionarios
+      totalFuncionarios: progressSummary.totalFuncionarios || 0
     };
   };
   
   // Transform progress data to match our units data structure
   const transformUnitsData = (units: ApiProgressResponse["units"]): UnitData[] => {
-    return units.map(unit => ({
-      nome: unit.nome,
-      faturamento: {
-        atual: unit.faturamento.atual,
-        meta: unit.faturamento.metaLevels.length > 0 
-          ? unit.faturamento.metaLevels[0].valor 
-          : 0,
-        progresso: unit.faturamento.overallProgress,
-        metaLevels: unit.faturamento.metaLevels
-      },
-      despesa: {
-        atual: unit.despesa.atual,
-        meta: unit.despesa.metaLevels.length > 0 
-          ? unit.despesa.metaLevels[0].valor 
-          : 0,
-        progresso: unit.despesa.overallProgress,
-        valorReais: unit.despesa.valorReais,
-        isNegative: true,
-        metaLevels: unit.despesa.metaLevels
-      },
-      inadimplencia: {
-        atual: unit.inadimplencia.atual,
-        meta: unit.inadimplencia.metaLevels.length > 0 
-          ? unit.inadimplencia.metaLevels[0].valor 
-          : 0,
-        progresso: unit.inadimplencia.overallProgress,
-        valorReais: unit.inadimplencia.valorReais,
-        isNegative: true,
-        metaLevels: unit.inadimplencia.metaLevels
+    if (!units || units.length === 0) return [];
+    
+    return units.map(unit => {
+      // Ensure unit and all required properties exist
+      if (!unit || !unit.faturamento || !unit.despesa || !unit.inadimplencia) {
+        console.error('Invalid unit data format:', unit);
+        return {
+          nome: unit?.nome || 'Unidade desconhecida',
+          faturamento: {
+            atual: 0,
+            meta: 0,
+            progresso: 0,
+            metaLevels: []
+          },
+          despesa: {
+            atual: 0,
+            meta: 0,
+            progresso: 0,
+            valorReais: 0,
+            isNegative: true,
+            metaLevels: []
+          },
+          inadimplencia: {
+            atual: 0,
+            meta: 0,
+            progresso: 0,
+            valorReais: 0,
+            isNegative: true,
+            metaLevels: []
+          }
+        };
       }
-    }));
+      
+      return {
+        nome: unit.nome,
+        faturamento: {
+          atual: unit.faturamento.atual,
+          meta: unit.faturamento.metaLevels && unit.faturamento.metaLevels.length > 0 
+            ? unit.faturamento.metaLevels[0].valor 
+            : 0,
+          progresso: unit.faturamento.overallProgress,
+          metaLevels: unit.faturamento.metaLevels || []
+        },
+        despesa: {
+          atual: unit.despesa.atual,
+          meta: unit.despesa.metaLevels && unit.despesa.metaLevels.length > 0 
+            ? unit.despesa.metaLevels[0].valor 
+            : 0,
+          progresso: unit.despesa.overallProgress,
+          valorReais: unit.despesa.valorReais,
+          isNegative: true,
+          metaLevels: unit.despesa.metaLevels || []
+        },
+        inadimplencia: {
+          atual: unit.inadimplencia.atual,
+          meta: unit.inadimplencia.metaLevels && unit.inadimplencia.metaLevels.length > 0 
+            ? unit.inadimplencia.metaLevels[0].valor 
+            : 0,
+          progresso: unit.inadimplencia.overallProgress,
+          valorReais: unit.inadimplencia.valorReais,
+          isNegative: true,
+          metaLevels: unit.inadimplencia.metaLevels || []
+        }
+      };
+    });
   };
   
   // Fetch data when date range changes
@@ -411,12 +498,13 @@ export default function PainelResultados() {
 
   // New function to get remaining text based on the next incomplete meta level
   const getRemainingText = (faturamento: { atual: number; metaLevels?: MetaLevel[] }) => {
-    if (!faturamento.metaLevels || faturamento.metaLevels.length === 0) {
+    if (!faturamento || !faturamento.metaLevels || faturamento.metaLevels.length === 0) {
       return "Sem metas definidas";
     }
 
     // Helper function to convert Roman numeral to integer
     const romanToInt = (roman: string) => {
+      if (!roman) return 0;
       const romanValues: Record<string, number> = {
         'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
         'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
@@ -424,15 +512,19 @@ export default function PainelResultados() {
       return romanValues[roman] || 0;
     };
     
+    // Create a shallow copy to avoid modifying the original array
+    const metasArray = Array.isArray(faturamento.metaLevels) ? [...faturamento.metaLevels] : [];
+    if (metasArray.length === 0) return "Sem metas definidas";
+    
     // Sort by Roman numeral order
-    const sortedMetas = [...faturamento.metaLevels].sort((a, b) => {
+    const sortedMetas = metasArray.sort((a, b) => {
       const nivelA = romanToInt(a.nivel);
       const nivelB = romanToInt(b.nivel);
       return nivelA - nivelB;
     });
 
     // Find first meta that's not completed
-    const nextMeta = sortedMetas.find(m => m.progress < 100);
+    const nextMeta = sortedMetas.find(m => m && m.progress < 100);
     
     if (nextMeta) {
       // Calculate remaining value to reach this meta
@@ -448,14 +540,15 @@ export default function PainelResultados() {
 
   // Function to get remaining text for reversed metrics like despesa and inadimplência
   const getReversedRemainingText = (metric: { atual: number; meta: number; restante: number; metaLevels?: MetaLevel[] }) => {
-    if (!metric.metaLevels || metric.metaLevels.length === 0) {
+    if (!metric || !metric.metaLevels || metric.metaLevels.length === 0) {
       // If no meta levels, use simple comparison with meta value
       const isGood = metric.atual <= metric.meta;
-      return `${Math.abs(metric.restante).toFixed(2)}% ${isGood ? "abaixo" : "acima"} da meta`;
+      return `${Math.abs(metric.restante || 0).toFixed(2)}% ${isGood ? "abaixo" : "acima"} da meta`;
     }
 
     // Helper function to convert Roman numeral to integer
     const romanToInt = (roman: string) => {
+      if (!roman) return 0;
       const romanValues: Record<string, number> = {
         'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
         'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
@@ -463,15 +556,19 @@ export default function PainelResultados() {
       return romanValues[roman] || 0;
     };
     
+    // Create a shallow copy to avoid modifying the original array
+    const metasArray = Array.isArray(metric.metaLevels) ? [...metric.metaLevels] : [];
+    if (metasArray.length === 0) return `${Math.abs(metric.restante || 0).toFixed(2)}% da meta`;
+    
     // Sort by Roman numeral order
-    const sortedMetas = [...metric.metaLevels].sort((a, b) => {
+    const sortedMetas = metasArray.sort((a, b) => {
       const nivelA = romanToInt(a.nivel);
       const nivelB = romanToInt(b.nivel);
       return nivelA - nivelB;
     });
 
     // Find first meta that's not completed
-    const nextMeta = sortedMetas.find(m => m.progress < 100);
+    const nextMeta = sortedMetas.find(m => m && m.progress < 100);
     
     if (nextMeta) {
       // For uncompleted metas, show difference between actual and target
@@ -487,7 +584,7 @@ export default function PainelResultados() {
       return `${difference}% ${isGood ? "abaixo" : "acima"} da meta ${bestMeta.nivel}`;
     } else {
       // Fallback case
-      return `${Math.abs(metric.restante).toFixed(2)}% da meta`;
+      return `${Math.abs(metric.restante || 0).toFixed(2)}% da meta`;
     }
   };
 
