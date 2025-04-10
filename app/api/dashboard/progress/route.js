@@ -86,16 +86,8 @@ export async function GET(request) {
       ]
     };
     
-    console.log('Date filter:', {
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-      query: JSON.stringify(apontamentosQuery)
-    });
-    
     // Get all apontamentos matching the filter, sorted by updatedAt in descending order
     const allApontamentos = await Apontamento.find(apontamentosQuery).sort({ updatedAt: -1 });
-    
-    console.log(`Found ${allApontamentos.length} apontamentos overlapping with selected period`);
     
     // Create a map to store only the latest apontamento for each unit
     const latestApontamentosByUnit = new Map();
@@ -105,12 +97,6 @@ export async function GET(request) {
       if (!latestApontamentosByUnit.has(apt.unidade)) {
         latestApontamentosByUnit.set(apt.unidade, apt);
       }
-    });
-    
-    // Log the selected apontamentos for debugging
-    console.log('Selected apontamentos:');
-    latestApontamentosByUnit.forEach((apt, unit) => {
-      console.log(`Unit: ${unit}, Period: ${apt.periodo}, Data: ${apt.dataInicio} to ${apt.dataFim}`);
     });
     
     // Replace simulated data with actual apontamentos data
@@ -177,50 +163,6 @@ export async function GET(request) {
         totalActual, 
         totalFuncionarios
       );
-      
-      // Add debug logs for Total Faturamento
-      console.log('=== FATURAMENTO TOTAL DEBUG INFO ===');
-      
-      // Log apontamento data
-      console.log('APONTAMENTO:', {
-        faturamento: totalActual.faturamento.atual.toLocaleString('pt-BR'),
-        despesa: totalActual.despesa.atual.toFixed(2) + '%',
-        inadimplencia: totalActual.inadimplencia.atual.toFixed(2) + '%'
-      });
-      
-      // Log meta levels
-      console.log('META LEVELS:');
-      totalMetas.forEach(meta => {
-        console.log(`Nivel ${meta.nivel}: Faturamento ${meta.faturamento.toLocaleString('pt-BR')}, Despesa ${meta.despesa}%, Inadimplencia ${meta.inadimplencia}%`);
-      });
-      
-      // Log progress for each metric
-      console.log('PROGRESS:');
-      console.log('Faturamento:', {
-        overallProgress: progressData.summary.faturamento.overallProgress + '%',
-        metaLevels: progressData.summary.faturamento.metaLevels.map(m => ({ 
-          nivel: m.nivel, 
-          valor: m.valor.toLocaleString('pt-BR'), 
-          progress: m.progress + '%' 
-        }))
-      });
-      console.log('Despesa:', {
-        overallProgress: progressData.summary.despesa.overallProgress + '%',
-        metaLevels: progressData.summary.despesa.metaLevels.map(m => ({ 
-          nivel: m.nivel, 
-          valor: m.valor.toFixed(2) + '%', 
-          progress: m.progress + '%' 
-        }))
-      });
-      console.log('Inadimplencia:', {
-        overallProgress: progressData.summary.inadimplencia.overallProgress + '%',
-        metaLevels: progressData.summary.inadimplencia.metaLevels.map(m => ({ 
-          nivel: m.nivel, 
-          valor: m.valor.toFixed(2) + '%', 
-          progress: m.progress + '%' 
-        }))
-      });
-      console.log('=== END FATURAMENTO TOTAL DEBUG INFO ===');
     }
     
     // Calculate progress for each individual unit
@@ -293,15 +235,6 @@ function calculateProgressForUnit(unitName, metaList, actualData, totalFuncionar
     };
   });
   
-  // Add debug info for faturamentoPorFuncionario metas if Total unit
-  if (unitName === 'Total') {
-    console.log('=== FATURAMENTO POR FUNCIONARIO META LEVELS ===');
-    faturamentoPorFuncionarioMetas.forEach(meta => {
-      console.log(`Nivel ${meta.nivel}: Faturamento por funcionário ${meta.faturamentoPorFuncionario.toLocaleString('pt-BR')}`);
-    });
-    console.log('=== END FATURAMENTO POR FUNCIONARIO META LEVELS ===');
-  }
-  
   // Calculate faturamento por funcionario progress
   const faturamentoPorFuncionarioActual = totalFuncionarios > 0 ? faturamentoActual / totalFuncionarios : 0;
   const faturamentoPorFuncionarioProgress = calculateMetricProgress(
@@ -349,14 +282,6 @@ function calculateProgressForUnit(unitName, metaList, actualData, totalFuncionar
  * For metrics like despesa and inadimplencia, lower values are better (isReversed=true)
  */
 function calculateMetricProgress(actualValue, metaList, metricName, isReversed) {
-  // Debug info for Total (rather than Caieiras)
-  const isDebugging = metricName && metaList.some(meta => meta.unidade === 'Total');
-  
-  if (isDebugging) {
-    console.log(`\nCALCULATING PROGRESS FOR: ${metricName} (${isReversed ? 'reversed' : 'normal'})`);
-    console.log(`Actual value: ${actualValue}`);
-  }
-
   // Special handling for faturamentoPorFuncionario which isn't directly in the meta model
   const getMetricValue = (meta) => {
     if (metricName === 'faturamentoPorFuncionario') {
@@ -379,13 +304,6 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
     return romanToInt(a.nivel) - romanToInt(b.nivel);
   });
   
-  if (isDebugging) {
-    console.log('Sorted meta levels:');
-    sortedMetas.forEach(meta => {
-      console.log(`  Level ${meta.nivel}: ${getMetricValue(meta)}`);
-    });
-  }
-  
   // Calculate the progress for each meta level
   const metaProgresses = [];
   
@@ -400,21 +318,11 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
       // For reversed metrics, we meet the goal if actual value is LOWER than target
       const isCompleted = actualValue <= targetValue;
       
-      if (isDebugging) {
-        console.log(`\nLevel ${sortedMetas[i].nivel}:`);
-        console.log(`  Target: ${targetValue}`);
-        console.log(`  Completed: ${isCompleted}`);
-      }
-      
       // Calculate progress within this level
       let progress = 0;
       if (isCompleted) {
         progress = 100; // Level completed
         completedLevels++;
-        
-        if (isDebugging) {
-          console.log(`  Progress: 100% (completed)`);
-        }
       } else {
         // Not completed - calculate partial progress based on how close we are to target
         // For reversed metrics (like despesa/inadimplencia), lower values are better
@@ -433,19 +341,9 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
           referenceValue = targetValue * 1.5;
           // Calculate progress (as percentage of distance from reference to target)
           progress = Math.max(0, 100 - ((actualValue - targetValue) / (referenceValue - targetValue)) * 100);
-          
-          if (isDebugging) {
-            console.log(`  First level calculation: using reference value ${referenceValue}`);
-            console.log(`  Progress: Math.max(0, 100 - ((${actualValue} - ${targetValue}) / (${referenceValue} - ${targetValue})) * 100)`);
-            console.log(`  Progress: ${progress.toFixed(2)}%`);
-          }
         } else {
           // For higher levels, use previous level as reference
           const prevTarget = getMetricValue(sortedMetas[i - 1]);
-          
-          if (isDebugging) {
-            console.log(`  Previous level target: ${prevTarget}`);
-          }
           
           // Calculate progress from previous level to current
           if (actualValue < prevTarget) {
@@ -453,22 +351,12 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
             const range = prevTarget - targetValue;
             if (range > 0) {
               progress = Math.max(0, 100 * (prevTarget - actualValue) / range);
-              
-              if (isDebugging) {
-                console.log(`  Between levels calculation: 100 * (${prevTarget} - ${actualValue}) / ${range}`);
-                console.log(`  Progress: ${progress.toFixed(2)}%`);
-              }
             }
           } else {
             // We're worse than or equal to previous level
             // Calculate based on how close we are to previous level
             progress = Math.max(0, 100 - ((actualValue - prevTarget) / (prevTarget * 0.2)) * 100);
             progress = Math.min(progress, 20); // Cap at 20% if we're at or worse than previous level
-            
-            if (isDebugging) {
-              console.log(`  Worse than previous: Math.max(0, 100 - ((${actualValue} - ${prevTarget}) / (${prevTarget * 0.2})) * 100)`);
-              console.log(`  Progress: ${progress.toFixed(2)}% (capped at 20%)`);
-            }
           }
         }
         
@@ -489,38 +377,19 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
       // For regular metrics, we meet the goal if actual value is HIGHER than target
       const isCompleted = actualValue >= targetValue;
       
-      if (isDebugging) {
-        console.log(`\nLevel ${sortedMetas[i].nivel}:`);
-        console.log(`  Target: ${targetValue}`);
-        console.log(`  Completed: ${isCompleted}`);
-      }
-      
       // Calculate progress within this level
       let progress = 0;
       if (isCompleted) {
         progress = 100; // Level completed
         completedLevels++;
-        
-        if (isDebugging) {
-          console.log(`  Progress: 100% (completed)`);
-        }
       } else {
         // For uncompleted levels, calculate progress based on how close we are
         if (i === 0) {
           // First level - calculate progress from 0 to target
           progress = Math.min(99, Math.max(0, (actualValue / targetValue) * 100));
-          
-          if (isDebugging) {
-            console.log(`  First level calculation: Math.min(99, Math.max(0, (${actualValue} / ${targetValue}) * 100))`);
-            console.log(`  Progress: ${progress.toFixed(2)}%`);
-          }
         } else {
           // Higher levels - calculate progress from previous level
           const prevTarget = getMetricValue(sortedMetas[i-1]);
-          
-          if (isDebugging) {
-            console.log(`  Previous level target: ${prevTarget}`);
-          }
           
           // Calculate progress only if we've met the previous level's target
           if (actualValue >= prevTarget) {
@@ -528,22 +397,12 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
             const range = targetValue - prevTarget;
             if (range > 0) {
               progress = Math.min(99, Math.max(0, 100 * (actualValue - prevTarget) / range));
-              
-              if (isDebugging) {
-                console.log(`  Between levels calculation: Math.min(99, Math.max(0, 100 * (${actualValue} - ${prevTarget}) / ${range}))`);
-                console.log(`  Progress: ${progress.toFixed(2)}%`);
-              }
             }
           } else {
             // For Levels we haven't reached yet, still show some progress based on 
             // overall achievement toward the previous level target (up to 10%)
             const percentOfPrevious = (actualValue / prevTarget) * 100;
             progress = Math.min(10, Math.max(0, percentOfPrevious / 10));
-            
-            if (isDebugging) {
-              console.log(`  Progress toward previous level: ${percentOfPrevious.toFixed(2)}%`);
-              console.log(`  Scaled progress: ${progress.toFixed(2)}% (capped at 10%)`);
-            }
           }
         }
       }
@@ -588,18 +447,6 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
       
       // Overall progress is the sum of completed segments plus current segment's contribution
       overallProgress = completedProgress + currentSegmentProgress;
-      
-      if (isDebugging) {
-        console.log(`\nNew overall progress calculation (first incomplete level):`);
-        console.log(`  Total levels: ${totalLevels}`);
-        console.log(`  First incomplete level index: ${firstIncompleteLevelIndex} (${sortedMetas[firstIncompleteLevelIndex].nivel})`);
-        console.log(`  Level segment size: ${levelSegmentSize.toFixed(2)}%`);
-        console.log(`  Completed segments: ${completedSegments}`);
-        console.log(`  Completed progress: ${completedProgress.toFixed(2)}%`);
-        console.log(`  Current level progress: ${currentLevelProgress}%`);
-        console.log(`  Current segment progress: ${currentSegmentProgress.toFixed(2)}%`);
-        console.log(`  New overall progress: ${overallProgress.toFixed(2)}%`);
-      }
     }
   }
   
@@ -609,36 +456,13 @@ function calculateMetricProgress(actualValue, metaList, metricName, isReversed) 
     // If the first level is more than 80% complete, boost the overall progress
     // to reflect how close we are to the first milestone
     const newOverallProgress = Math.min(24, metaProgresses[0].progress / 4);
-    
-    if (isDebugging && newOverallProgress > overallProgress) {
-      console.log(`\nNormal metric boost for high Level I progress:`);
-      console.log(`  Level I progress: ${metaProgresses[0].progress}%`);
-      console.log(`  Boosting overall from ${overallProgress.toFixed(2)}% to ${newOverallProgress.toFixed(2)}%`);
-    }
-    
     overallProgress = Math.max(overallProgress, newOverallProgress);
   }
   
   // For reversed metrics (like despesa/inadimplencia), if we're close to Level I (>80%),
   // boost the progress to at least 20%
   if (isReversed && totalLevels > 0 && metaProgresses[0].progress > 80 && overallProgress < 20) {
-    const newOverallProgress = 20;
-    
-    if (isDebugging) {
-      console.log(`\nReversed metric boost for high Level I progress:`);
-      console.log(`  Level I progress: ${metaProgresses[0].progress}%`);
-      console.log(`  Boosting overall from ${overallProgress.toFixed(2)}% to ${newOverallProgress}%`);
-    }
-    
-    overallProgress = newOverallProgress;
-  }
-  
-  if (isDebugging) {
-    console.log('\nFinal progress results:');
-    metaProgresses.forEach(meta => {
-      console.log(`  Level ${meta.nivel}: ${meta.progress}%`);
-    });
-    console.log(`  Overall progress: ${Math.round(overallProgress)}%`);
+    overallProgress = 20;
   }
   
   return {
