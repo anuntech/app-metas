@@ -78,7 +78,7 @@ export default function DefinicaoMetas() {
   }
 
   return (
-    <div>
+    <div className="mt-10">
       <div className="container mx-auto space-y-6 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div className="w-full sm:w-64 relative">

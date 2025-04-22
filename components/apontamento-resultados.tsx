@@ -93,7 +93,7 @@ export default function ApontamentoResultados() {
   }
 
   return (
-    <div>
+    <div className="mt-10">
       <div className="container mx-auto space-y-6 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div className="w-full sm:w-64 relative">
@@ -175,42 +175,53 @@ export default function ApontamentoResultados() {
                       selectedApontamentoId === apontamento._id && (isDeleting || isEditing)
                         ? "opacity-50 bg-red-50"
                         : ""
-                    }`}
+                    } ${apontamento.isCalculated ? "bg-blue-50" : ""}`}
                   >
                     <TableCell>{apontamento.periodo}</TableCell>
-                    <TableCell>{apontamento.unidade}</TableCell>
+                    <TableCell>
+                      {apontamento.unidade}
+                      {apontamento.isCalculated && (
+                        <span className="ml-1 text-xs text-blue-600 font-medium">(Calculado)</span>
+                      )}
+                    </TableCell>
                     <TableCell>{formatCurrency(apontamento.faturamento)}</TableCell>
                     <TableCell>{formatCurrency(apontamento.recebimento)}</TableCell>
                     <TableCell>{formatCurrency(apontamento.despesa)}</TableCell>
                     <TableCell>{formatPercentage(apontamento.inadimplenciaPercentual)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-brand-blue hover:text-brand-darkBlue hover:bg-brand-yellow hover:bg-opacity-20"
-                          onClick={() => handleEdit(apontamento)}
-                          disabled={isEditing && selectedApontamentoId === apontamento._id}
-                        >
-                          {isEditing && selectedApontamentoId === apontamento._id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Pencil className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-red-500 hover:text-red-700 hover:bg-red-100"
-                          onClick={() => confirmDelete(apontamento._id)}
-                          disabled={isDeleting && selectedApontamentoId === apontamento._id}
-                        >
-                          {isDeleting && selectedApontamentoId === apontamento._id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+                        {!apontamento.isCalculated ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-brand-blue hover:text-brand-darkBlue hover:bg-brand-yellow hover:bg-opacity-20"
+                              onClick={() => handleEdit(apontamento)}
+                              disabled={isEditing && selectedApontamentoId === apontamento._id}
+                            >
+                              {isEditing && selectedApontamentoId === apontamento._id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Pencil className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                              onClick={() => confirmDelete(apontamento._id)}
+                              disabled={isDeleting && selectedApontamentoId === apontamento._id}
+                            >
+                              {isDeleting && selectedApontamentoId === apontamento._id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-blue-600">Automático</span>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -224,6 +235,9 @@ export default function ApontamentoResultados() {
               )}
             </TableBody>
           </Table>
+          <div className="text-xs text-muted-foreground mt-2 p-2 bg-blue-50 rounded border border-blue-100">
+            <strong>Nota:</strong> Os totais são calculados automaticamente baseados nos apontamentos de cada unidade. Não é mais necessário cadastrar manualmente os apontamentos do tipo "Total".
+          </div>
         </div>
 
         {/* Add Apontamento Dialog */}

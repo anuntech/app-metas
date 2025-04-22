@@ -259,7 +259,12 @@ export default function PainelResultados() {
         endDate
       });
       
-      console.log(`Fetching progress data`);
+      console.log(`Fetching progress data with date range:`, {
+        startDate,
+        endDate,
+        queryString: queryParams.toString()
+      });
+      
       const progressResponse = await fetch(`/api/dashboard/progress?${queryParams}`);
       
       if (!progressResponse.ok) {
@@ -270,12 +275,30 @@ export default function PainelResultados() {
       const progressData = await progressResponse.json();
       console.log(`Progress data received:`, progressData);
       
+      // Check if we have data for Total/summary
+      console.log('Summary data available:', !!progressData.summary && Object.keys(progressData.summary).length > 0);
+      if (progressData.summary && progressData.summary.faturamento) {
+        console.log('Total faturamento:', progressData.summary.faturamento.atual);
+      } else {
+        console.log('No total faturamento data found in the response');
+      }
+      
+      // Log apontamento availability
+      if (progressData.apontamentos) {
+        console.log('Total apontamentos found:', progressData.apontamentos.length);
+        console.log('Apontamentos:', progressData.apontamentos);
+      } else {
+        console.log('No apontamentos data in the response');
+      }
+      
       // Transform the progress data to match our state structure
       const transformedSummary = transformSummaryData(progressData.summary);
+      console.log('Transformed summary data:', transformedSummary);
       setSummaryData(transformedSummary);
       
       // Transform and set units data
       const transformedUnits = transformUnitsData(progressData.units);
+      console.log('Transformed units data:', transformedUnits);
       setUnitsData(transformedUnits);
       
     } catch (err) {
@@ -347,49 +370,45 @@ export default function PainelResultados() {
     const despesa = progressSummary.despesa || {...defaultMetrics, valorReais: 0};
     const inadimplencia = progressSummary.inadimplencia || {...defaultMetrics, valorReais: 0};
 
+    // For metrics that have actual values but no meta levels (e.g., we have apontamento but no metas)
+    // Set a default meta value that's a bit higher than the atual value for display purposes
+    const getDefaultMetaValue = (atual: number) => atual * 1.1; // 10% higher than atual as default
+    
+    // Get meta value, defaulting to something reasonable if metaLevels is empty
+    const getMetaValue = (metric: { atual: number, metaLevels?: MetaLevel[] }) => {
+      if (metric.metaLevels && metric.metaLevels.length > 0) {
+        return metric.metaLevels[0].valor;
+      }
+      return getDefaultMetaValue(metric.atual);
+    };
+    
     return {
       faturamento: {
         atual: faturamento.atual,
-        meta: faturamento.metaLevels && faturamento.metaLevels.length > 0 
-          ? faturamento.metaLevels[0].valor 
-          : 0,
-        restante: faturamento.metaLevels && faturamento.metaLevels.length > 0 
-          ? Math.max(0, faturamento.metaLevels[0].valor - faturamento.atual)
-          : 0,
+        meta: getMetaValue(faturamento),
+        restante: Math.max(0, getMetaValue(faturamento) - faturamento.atual),
         progresso: faturamento.overallProgress,
         metaLevels: faturamento.metaLevels || []
       },
       faturamentoPorFuncionario: {
         atual: faturamentoPorFuncionario.atual,
-        meta: faturamentoPorFuncionario.metaLevels && faturamentoPorFuncionario.metaLevels.length > 0 
-          ? faturamentoPorFuncionario.metaLevels[0].valor 
-          : 0,
-        restante: faturamentoPorFuncionario.metaLevels && faturamentoPorFuncionario.metaLevels.length > 0 
-          ? Math.max(0, faturamentoPorFuncionario.metaLevels[0].valor - faturamentoPorFuncionario.atual)
-          : 0,
+        meta: getMetaValue(faturamentoPorFuncionario),
+        restante: Math.max(0, getMetaValue(faturamentoPorFuncionario) - faturamentoPorFuncionario.atual),
         progresso: faturamentoPorFuncionario.overallProgress,
         metaLevels: faturamentoPorFuncionario.metaLevels || []
       },
       despesa: {
         atual: despesa.atual,
-        meta: despesa.metaLevels && despesa.metaLevels.length > 0 
-          ? despesa.metaLevels[0].valor 
-          : 0,
-        restante: despesa.metaLevels && despesa.metaLevels.length > 0 
-          ? despesa.atual - despesa.metaLevels[0].valor
-          : 0,
+        meta: getMetaValue(despesa),
+        restante: despesa.atual - getMetaValue(despesa),
         progresso: despesa.overallProgress,
         valorReais: despesa.valorReais || 0,
         metaLevels: despesa.metaLevels || []
       },
       inadimplencia: {
         atual: inadimplencia.atual,
-        meta: inadimplencia.metaLevels && inadimplencia.metaLevels.length > 0 
-          ? inadimplencia.metaLevels[0].valor 
-          : 0,
-        restante: inadimplencia.metaLevels && inadimplencia.metaLevels.length > 0 
-          ? inadimplencia.atual - inadimplencia.metaLevels[0].valor
-          : 0,
+        meta: getMetaValue(inadimplencia),
+        restante: inadimplencia.atual - getMetaValue(inadimplencia),
         progresso: inadimplencia.overallProgress,
         valorReais: inadimplencia.valorReais || 0,
         metaLevels: inadimplencia.metaLevels || []
@@ -401,6 +420,17 @@ export default function PainelResultados() {
   // Transform progress data to match our units data structure
   const transformUnitsData = (units: ApiProgressResponse["units"]): UnitData[] => {
     if (!units || units.length === 0) return [];
+    
+    // Helper function for getting default meta value when no meta levels exist
+    const getDefaultMetaValue = (atual: number) => atual * 1.1; // 10% higher than atual as default
+    
+    // Get meta value, defaulting to something reasonable if metaLevels is empty
+    const getMetaValue = (metric: { atual: number, metaLevels?: MetaLevel[] }) => {
+      if (metric.metaLevels && metric.metaLevels.length > 0) {
+        return metric.metaLevels[0].valor;
+      }
+      return getDefaultMetaValue(metric.atual);
+    };
     
     return units.map(unit => {
       // Ensure unit and all required properties exist
@@ -437,17 +467,13 @@ export default function PainelResultados() {
         nome: unit.nome,
         faturamento: {
           atual: unit.faturamento.atual,
-          meta: unit.faturamento.metaLevels && unit.faturamento.metaLevels.length > 0 
-            ? unit.faturamento.metaLevels[0].valor 
-            : 0,
+          meta: getMetaValue(unit.faturamento),
           progresso: unit.faturamento.overallProgress,
           metaLevels: unit.faturamento.metaLevels || []
         },
         despesa: {
           atual: unit.despesa.atual,
-          meta: unit.despesa.metaLevels && unit.despesa.metaLevels.length > 0 
-            ? unit.despesa.metaLevels[0].valor 
-            : 0,
+          meta: getMetaValue(unit.despesa),
           progresso: unit.despesa.overallProgress,
           valorReais: unit.despesa.valorReais,
           isNegative: true,
@@ -455,9 +481,7 @@ export default function PainelResultados() {
         },
         inadimplencia: {
           atual: unit.inadimplencia.atual,
-          meta: unit.inadimplencia.metaLevels && unit.inadimplencia.metaLevels.length > 0 
-            ? unit.inadimplencia.metaLevels[0].valor 
-            : 0,
+          meta: getMetaValue(unit.inadimplencia),
           progresso: unit.inadimplencia.overallProgress,
           valorReais: unit.inadimplencia.valorReais,
           isNegative: true,
@@ -632,6 +656,11 @@ export default function PainelResultados() {
                 </PopoverContent>
               </Popover>
             </div>
+          </div>
+
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800">
+            <strong>Nota:</strong> Os valores totais são agora calculados automaticamente com base nos apontamentos individuais de cada unidade.
+            Não é mais necessário adicionar apontamentos do tipo "Total", pois eles são gerados pelo sistema.         
           </div>
 
           {loading ? (

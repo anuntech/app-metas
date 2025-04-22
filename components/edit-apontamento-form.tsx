@@ -36,64 +36,61 @@ type EditApontamentoFormProps = {
 export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFormProps) {
   const [loading, setLoading] = useState(false)
   
+  // Parse the date strings
+  const startDate = apontamento.dataInicio ? new Date(apontamento.dataInicio) : new Date();
+  const endDate = apontamento.dataFim ? new Date(apontamento.dataFim) : new Date();
+  
   // For date picker
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
-    if (apontamento.dataInicio && apontamento.dataFim) {
-      return {
-        from: new Date(apontamento.dataInicio),
-        to: new Date(apontamento.dataFim)
-      };
-    }
-    return undefined;
-  })
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startDate,
+    to: endDate
+  });
 
-  // Use the context
-  const { updateApontamento } = useApontamentosContext()
+  // Use the apontamentos context
+  const { updateApontamento } = useApontamentosContext();
 
-  const unidades = ["Total", "Caieiras", "Francisco Morato", "Mairiporã", "SP - Perus", "Franco da Rocha"]
+  // Removed "Total" since it will be calculated automatically
+  const unidades = ["Caieiras", "Francisco Morato", "Mairiporã", "SP - Perus", "Franco da Rocha"]
 
   // Initialize form state with the apontamento data
   const [formData, setFormData] = useState<ApontamentoFormData>({
     periodo: apontamento.periodo,
     unidade: apontamento.unidade,
-    faturamento: formatCurrencyInput(apontamento.faturamento.toString()),
-    recebimento: formatCurrencyInput(apontamento.recebimento.toString()),
-    despesa: formatCurrencyInput(apontamento.despesa.toString()),
-    inadimplenciaPercentual: formatPercentageInput(apontamento.inadimplenciaPercentual.toString()),
-    inadimplenciaValor: formatCurrencyInput(apontamento.inadimplenciaValor.toString())
+    faturamento: formatCurrencyForInput(apontamento.faturamento),
+    recebimento: formatCurrencyForInput(apontamento.recebimento),
+    despesa: formatCurrencyForInput(apontamento.despesa),
+    inadimplenciaPercentual: formatPercentageForInput(apontamento.inadimplenciaPercentual),
+    inadimplenciaValor: formatCurrencyForInput(apontamento.inadimplenciaValor),
   });
 
   // Format currency as user types (BRL)
-  function formatCurrencyInput(value: string): string {
+  function formatCurrencyForInput(value: number | string): string {
+    // Convert to string if it's a number
+    const stringValue = typeof value === 'number' ? value.toString() : value;
+    
     // Remove non-digit characters
-    const digits = value.replace(/\D/g, '');
+    const digits = stringValue.replace(/\D/g, '');
     
     if (!digits) return '';
     
-    // If this is a pre-filled value (without decimals)
-    if (value.indexOf('.') === -1 && !isNaN(Number(value))) {
-      const numberValue = Number(value);
-      return numberValue.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    }
-    
-    // For user input (divide by 100 for decimal placement)
+    // Convert to number and format
     const numberValue = parseInt(digits) / 100;
     return numberValue.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
-  };
+  }
   
   // Format percentage as user types
-  function formatPercentageInput(value: string): string {
+  function formatPercentageForInput(value: number | string): string {
+    // Convert to string if it's a number
+    const stringValue = typeof value === 'number' ? value.toString() : value;
+    
     // If it already has %, just return the value
-    if (value.includes('%')) return value;
+    if (stringValue.includes('%')) return stringValue;
     
     // Remove percent sign and non-digit/non-decimal characters
-    const cleaned = value.replace(/[^\d.,]/g, '').replace(/,/g, '.');
+    const cleaned = stringValue.replace(/[^\d.,]/g, '').replace(/,/g, '.');
     
     // Handle empty or invalid input
     if (!cleaned) return '';
@@ -104,7 +101,7 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
     
     // Add percent sign
     return formatted + '%';
-  };
+  }
 
   // Handle input changes with formatting
   const handleChange = (field: keyof ApontamentoFormData, value: string) => {
@@ -112,11 +109,11 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
     
     // Apply specific formatting based on field type
     if (field === 'faturamento' || field === 'recebimento' || field === 'despesa' || field === 'inadimplenciaValor') {
-      formattedValue = formatCurrencyInput(value);
+      formattedValue = formatCurrencyForInput(value);
     } else if (field === 'inadimplenciaPercentual') {
       // Only format if not empty
       if (value) {
-        formattedValue = formatPercentageInput(value);
+        formattedValue = formatPercentageForInput(value);
       }
     }
     

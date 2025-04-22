@@ -54,6 +54,16 @@ export async function GET(request) {
       unitMetas[meta.unidade].push(meta);
     });
     
+    // Log meta data availability
+    console.log(`Found metas for ${Object.keys(unitMetas).length} units:`, Object.keys(unitMetas));
+    
+    // Check if we have "Total" metas
+    if (unitMetas['Total']) {
+      console.log(`Found ${unitMetas['Total'].length} "Total" metas`);
+    } else {
+      console.log('No "Total" metas found - summary data will be empty');
+    }
+    
     // For each unit, sort meta levels by the faturamento value
     for (const unit in unitMetas) {
       unitMetas[unit].sort((a, b) => a.faturamento - b.faturamento);
@@ -99,10 +109,61 @@ export async function GET(request) {
       }
     });
     
+    // Calculate the "Total" apontamento based on unit apontamentos (if not already present)
+    if (!latestApontamentosByUnit.has('Total')) {
+      // Filter to only include unit apontamentos (not "Total")
+      const unitApontamentos = Array.from(latestApontamentosByUnit.values())
+        .filter(apt => apt.unidade !== 'Total');
+      
+      if (unitApontamentos.length > 0) {
+        // Create a sample apontamento from the first unit for reference
+        const sampleApontamento = { ...unitApontamentos[0] };
+        
+        // Calculate sums for numerical values
+        const totalFaturamento = unitApontamentos.reduce((sum, apt) => sum + apt.faturamento, 0);
+        const totalRecebimento = unitApontamentos.reduce((sum, apt) => sum + apt.recebimento, 0);
+        const totalDespesa = unitApontamentos.reduce((sum, apt) => sum + apt.despesa, 0);
+        
+        // Calculate inadimplência percentual (faturamento - recebimento) / faturamento * 100
+        const inadimplenciaPercentual = totalFaturamento === 0 
+          ? 0 
+          : Number(((totalFaturamento - totalRecebimento) / totalFaturamento * 100).toFixed(2));
+        
+        // Create the calculated total object
+        const calculatedTotal = {
+          _id: `calculated-total-${sampleApontamento.periodo}`,
+          periodo: sampleApontamento.periodo,
+          unidade: "Total",
+          faturamento: totalFaturamento,
+          recebimento: totalRecebimento,
+          despesa: totalDespesa,
+          inadimplenciaPercentual: inadimplenciaPercentual,
+          inadimplenciaValor: totalFaturamento - totalRecebimento,
+          dataInicio: sampleApontamento.dataInicio,
+          dataFim: sampleApontamento.dataFim,
+          mes: sampleApontamento.mes,
+          ano: sampleApontamento.ano,
+          isCalculated: true
+        };
+        
+        // Add the calculated total to the map
+        latestApontamentosByUnit.set('Total', calculatedTotal);
+      }
+    }
+    
     // Replace simulated data with actual apontamentos data
     const getActualPerformance = (unit) => {
       // Get the most recent apontamento for this unit
       const apontamento = latestApontamentosByUnit.get(unit);
+      
+      console.log(`Getting actual performance for unit '${unit}':`, apontamento ? {
+        found: true,
+        isCalculated: apontamento.isCalculated || false,
+        faturamento: apontamento.faturamento, 
+        recebimento: apontamento.recebimento,
+        despesa: apontamento.despesa,
+        inadimplenciaPercentual: apontamento.inadimplenciaPercentual
+      } : 'No apontamento found');
       
       // If no apontamento found, return default values
       if (!apontamento) {
@@ -142,13 +203,75 @@ export async function GET(request) {
     // Prepare the response with progress data for each unit
     const progressData = {
       summary: {},
-      units: []
+      units: [],
+      apontamentos: Array.from(latestApontamentosByUnit.values()) // Include apontamentos in the response for debugging
     };
     
-    // Calculate progress for Total (summary)
+    // Log the apontamentos being used for calculations
+    console.log(`Dashboard progress: Found ${progressData.apontamentos.length} apontamentos for calculation`);
+    
+    // Specifically log the Total apontamento if it exists
+    const totalApontamento = latestApontamentosByUnit.get('Total');
+    if (totalApontamento) {
+      console.log('Total apontamento found:', {
+        faturamento: totalApontamento.faturamento,
+        recebimento: totalApontamento.recebimento,
+        despesa: totalApontamento.despesa,
+        inadimplenciaPercentual: totalApontamento.inadimplenciaPercentual
+      });
+      
+      // Add a simple summary even if no Total meta exists
+      // This ensures the dashboard can show the basic total values even without progress calculations
+      if (!unitMetas['Total']) {
+        // Calculate despesa percentage
+        const despesaPercent = totalApontamento.faturamento > 0 
+          ? (totalApontamento.despesa / totalApontamento.faturamento) * 100 
+          : 0;
+        
+        progressData.summary = {
+          nome: 'Total',
+          faturamento: {
+            atual: totalApontamento.faturamento,
+            valorReais: totalApontamento.faturamento,
+            metaLevels: [],
+            overallProgress: 0
+          },
+          faturamentoPorFuncionario: {
+            atual: 0,
+            metaLevels: [],
+            overallProgress: 0
+          },
+          despesa: {
+            atual: despesaPercent,
+            valorReais: totalApontamento.despesa,
+            metaLevels: [],
+            overallProgress: 0
+          },
+          inadimplencia: {
+            atual: totalApontamento.inadimplenciaPercentual,
+            valorReais: totalApontamento.inadimplenciaValor || 0,
+            metaLevels: [],
+            overallProgress: 0
+          },
+          totalFuncionarios: 0
+        };
+        
+        console.log('Created simple summary for Total (no metas):', {
+          faturamento: progressData.summary.faturamento.atual,
+          despesa: progressData.summary.despesa.atual,
+          inadimplencia: progressData.summary.inadimplencia.atual
+        });
+      }
+    } else {
+      console.log('No Total apontamento found');
+    }
+    
+    // Calculate progress for Total (summary) if Total metas exist
     if (unitMetas['Total']) {
       const totalMetas = unitMetas['Total'];
       const totalActual = getActualPerformance('Total');
+      
+      console.log('Using Total performance data:', totalActual);
       
       // Calculate total funcionários
       let totalFuncionarios = 0;
@@ -163,6 +286,12 @@ export async function GET(request) {
         totalActual, 
         totalFuncionarios
       );
+      
+      console.log('Calculated summary data:', {
+        faturamento: progressData.summary.faturamento.atual,
+        despesa: progressData.summary.despesa.atual,
+        inadimplencia: progressData.summary.inadimplencia.atual
+      });
     }
     
     // Calculate progress for each individual unit

@@ -42,7 +42,8 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
   // Use the apontamentos context
   const { addApontamento } = useApontamentosContext();
 
-  const unidades = ["Total", "Caieiras", "Francisco Morato", "Mairiporã", "SP - Perus", "Franco da Rocha"]
+  // Removed "Total" since it will be calculated automatically
+  const unidades = ["Caieiras", "Francisco Morato", "Mairiporã", "SP - Perus", "Franco da Rocha"]
 
   // Initialize form state
   const [formData, setFormData] = useState<ApontamentoFormData>({
