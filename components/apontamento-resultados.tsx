@@ -235,9 +235,6 @@ export default function ApontamentoResultados() {
               )}
             </TableBody>
           </Table>
-          <div className="text-xs text-muted-foreground mt-2 p-2 bg-blue-50 rounded border border-blue-100">
-            <strong>Nota:</strong> Os totais são calculados automaticamente baseados nos apontamentos de cada unidade. Não é mais necessário cadastrar manualmente os apontamentos do tipo "Total".
-          </div>
         </div>
 
         {/* Add Apontamento Dialog */}

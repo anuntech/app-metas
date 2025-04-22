@@ -657,12 +657,6 @@ export default function PainelResultados() {
               </Popover>
             </div>
           </div>
-
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800">
-            <strong>Nota:</strong> Os valores totais são agora calculados automaticamente com base nos apontamentos individuais de cada unidade.
-            Não é mais necessário adicionar apontamentos do tipo "Total", pois eles são gerados pelo sistema.         
-          </div>
-
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {Array(4).fill(0).map((_, index) => (
