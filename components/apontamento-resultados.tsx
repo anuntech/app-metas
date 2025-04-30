@@ -131,6 +131,7 @@ export default function ApontamentoResultados() {
                 <TableHead>Recebimento</TableHead>
                 <TableHead>Despesa</TableHead>
                 <TableHead>Inadimplência</TableHead>
+                <TableHead>Inadimplência (R$)</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -152,6 +153,9 @@ export default function ApontamentoResultados() {
                       </TableCell>
                       <TableCell>
                         <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
                       </TableCell>
                       <TableCell>
                         <div className="h-4 w-16 bg-gray-200 rounded"></div>
@@ -188,6 +192,7 @@ export default function ApontamentoResultados() {
                     <TableCell>{formatCurrency(apontamento.recebimento)}</TableCell>
                     <TableCell>{formatCurrency(apontamento.despesa)}</TableCell>
                     <TableCell>{formatPercentage(apontamento.inadimplenciaPercentual)}</TableCell>
+                    <TableCell>{formatCurrency(apontamento.inadimplenciaValor)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         {!apontamento.isCalculated ? (
@@ -228,7 +233,7 @@ export default function ApontamentoResultados() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                     Nenhum apontamento encontrado para o mês selecionado
                   </TableCell>
                 </TableRow>
