@@ -46,15 +46,13 @@ export function AddMetaForm({ onClose }: { onClose: () => void }) {
     "Dezembro",
   ]
 
-  const niveis = ["I", "II", "III", "IV"]
-
   const unidades = ["Total", "Caieiras", "Francisco Morato", "Mairiporã", "SP - Perus", "Franco da Rocha"]
 
-  // Initialize form state
+  // Initialize form state - automatically set nivel to "I"
   const [formData, setFormData] = useState<MetaFormData>({
     mes: months[currentMonth],
     ano: currentYear.toString(),
-    nivel: '',
+    nivel: 'I',
     unidade: '',
     faturamento: '',
     funcionarios: '',
@@ -118,9 +116,9 @@ export function AddMetaForm({ onClose }: { onClose: () => void }) {
     setLoading(true)
 
     try {
-      // Validate required fields before submission
-      if (!formData.mes || !formData.ano || !formData.unidade || !formData.nivel) {
-        throw new Error("Preencha todos os campos obrigatórios: Mês, Ano, Unidade e Nível");
+      // Validate required fields before submission - we don't check nivel anymore since it's auto-set
+      if (!formData.mes || !formData.ano || !formData.unidade) {
+        throw new Error("Preencha todos os campos obrigatórios: Mês, Ano e Unidade");
       }
       
       // Prepare payload with proper data conversion
@@ -128,7 +126,7 @@ export function AddMetaForm({ onClose }: { onClose: () => void }) {
         mes: formData.mes,
         ano: parseInt(formData.ano),
         unidade: formData.unidade,
-        nivel: formData.nivel,
+        nivel: 'I', // Always set nivel to "I"
         // Parse numeric values from formatted strings
         faturamento: Number(formData.faturamento.replace(/\./g, '').replace(',', '.')) || 0,
         funcionarios: Number(formData.funcionarios) || 0,
@@ -192,25 +190,6 @@ export function AddMetaForm({ onClose }: { onClose: () => void }) {
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="nivel">Nível da meta</Label>
-        <Select
-          value={formData.nivel}
-          onValueChange={(value) => handleChange('nivel', value)}
-        >
-          <SelectTrigger id="nivel" className="text-sm">
-            <SelectValue placeholder="Selecione o nível" />
-          </SelectTrigger>
-          <SelectContent>
-            {niveis.map((nivel) => (
-              <SelectItem key={nivel} value={nivel}>
-                {nivel}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="space-y-1.5">

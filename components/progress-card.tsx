@@ -49,48 +49,21 @@ export function ProgressCard({
   const getNextMetaTarget = () => {
     if (!metaLevels || metaLevels.length === 0) return target;
     
-    // Helper function to convert Roman numeral to integer
-    const romanToInt = (roman: string) => {
-      const romanValues: Record<string, number> = {
-        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
-        'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
-      };
-      return romanValues[roman] || 0;
-    };
+    // With only one meta level, we just use it directly
+    const metaLevel = metaLevels[0];
+    if (!metaLevel) return target;
     
-    // Sort by Roman numeral order
-    const sortedMetas = [...metaLevels].sort((a, b) => {
-      const nivelA = romanToInt(a.nivel);
-      const nivelB = romanToInt(b.nivel);
-      return nivelA - nivelB;
-    });
-    
-    // Helper function to format meta level text
-    const formatMetaLevelText = (nivel: string | undefined, valor: number) => {
-      const metaPrefix = nivel ? `Meta ${nivel}` : "Próxima meta";
-      return `${metaPrefix}: ${formatValueBasedOnType(valor, value)}`;
+    // Just return the value in the appropriate format without "Meta:" text
+    const formatValueBasedOnType = (value: number, sample: string) => {
+      // Check if the sample is a percentage
+      if (sample.includes('%')) {
+        return `${value.toFixed(2)}%`;
+      }
+      // Otherwise assume it's currency or a plain number
+      return sample.replace(/[\d,.]+/, value.toLocaleString('pt-BR'));
     };
 
-    // For metrics where higher is better (not negative)
-    if (!isNegative) {
-      // Find first meta that's not completed
-      const nextMeta = sortedMetas.find(m => m.progress < 100);
-      if (nextMeta) {
-        return formatMetaLevelText(nextMeta.nivel, nextMeta.valor);
-      }
-      // If all metas completed, show the highest one
-      const highestMeta = sortedMetas[sortedMetas.length - 1];
-      return `${formatMetaLevelText(highestMeta.nivel, highestMeta.valor)} ✓`;
-    }
-    // For metrics where lower is better (negative like despesa)
-    // Find first meta that's not completed
-    const nextMeta = sortedMetas.find(m => m.progress < 100);
-    if (nextMeta) {
-      return formatMetaLevelText(nextMeta.nivel, nextMeta.valor);
-    }
-    // If all metas completed, show the lowest one
-    const lowestMeta = sortedMetas[sortedMetas.length - 1];
-    return `${formatMetaLevelText(lowestMeta.nivel, lowestMeta.valor)} ✓`;
+    return formatValueBasedOnType(metaLevel.valor, value);
   };
   
   // Format the value based on the type (percentage or currency)
@@ -111,34 +84,12 @@ export function ProgressCard({
     // Extract the numerical value from the value string
     const actualValue = parseFloat(value.replace(/[^0-9,.]/g, '').replace(',', '.'));
     
-    // Helper function to convert Roman numeral to integer
-    const romanToInt = (roman: string) => {
-      const romanValues: Record<string, number> = {
-        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
-        'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
-      };
-      return romanValues[roman] || 0;
-    };
-    
     // If we have meta levels, compare with the current target meta
     if (metaLevels && metaLevels.length > 0) {
-      // Sort by Roman numeral ordering
-      const sortedMetas = [...metaLevels].sort((a, b) => {
-        const nivelA = romanToInt(a.nivel);
-        const nivelB = romanToInt(b.nivel);
-        return nivelA - nivelB;
-      });
-      
-      // Find the next meta to achieve (first incomplete meta)
-      const nextMeta = sortedMetas.find(m => m.progress < 100);
-      
-      if (nextMeta) {
+      const metaLevel = metaLevels[0];
+      if (metaLevel) {
         // For reversed metrics, lower values are better
-        return actualValue <= nextMeta.valor ? "good" : "bad";
-      } else if (sortedMetas.length > 0) {
-        // All metas completed - compare with the highest meta level
-        const highestMeta = sortedMetas[sortedMetas.length - 1];
-        return actualValue <= highestMeta.valor ? "good" : "bad";
+        return actualValue <= metaLevel.valor ? "good" : "bad";
       }
     }
     

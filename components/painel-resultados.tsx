@@ -525,40 +525,13 @@ export default function PainelResultados() {
       return "Sem metas definidas";
     }
 
-    // Helper function to convert Roman numeral to integer
-    const romanToInt = (roman: string) => {
-      if (!roman) return 0;
-      const romanValues: Record<string, number> = {
-        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
-        'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
-      };
-      return romanValues[roman] || 0;
-    };
+    // With just a single meta level, we don't need to sort or find the next level
+    const metaLevel = faturamento.metaLevels[0];
+    if (!metaLevel) return "Sem metas definidas";
     
-    // Create a shallow copy to avoid modifying the original array
-    const metasArray = Array.isArray(faturamento.metaLevels) ? [...faturamento.metaLevels] : [];
-    if (metasArray.length === 0) return "Sem metas definidas";
-    
-    // Sort by Roman numeral order
-    const sortedMetas = metasArray.sort((a, b) => {
-      const nivelA = romanToInt(a.nivel);
-      const nivelB = romanToInt(b.nivel);
-      return nivelA - nivelB;
-    });
-
-    // Find first meta that's not completed
-    const nextMeta = sortedMetas.find(m => m && m.progress < 100);
-    
-    if (nextMeta) {
-      // Calculate remaining value to reach this meta
-      const remaining = Math.max(0, nextMeta.valor - faturamento.atual);
-      // Check if nivel is defined before using it
-      const metaPrefix = nextMeta.nivel ? `para Meta ${nextMeta.nivel}` : "para próxima meta";
-      return `${formatCurrency(remaining)} ${metaPrefix}`;
-    } else {
-      // All metas completed
-      return "Todas metas atingidas!";
-    }
+    // Calculate remaining value to reach this meta
+    const remaining = Math.max(0, metaLevel.valor - faturamento.atual);
+    return `${formatCurrency(remaining)} para Meta`;
   };
 
   // Function to get remaining text for reversed metrics like despesa and inadimplência
@@ -569,46 +542,14 @@ export default function PainelResultados() {
       return `${Math.abs(metric.restante || 0).toFixed(2)}% ${isGood ? "abaixo" : "acima"} da meta`;
     }
 
-    // Helper function to convert Roman numeral to integer
-    const romanToInt = (roman: string) => {
-      if (!roman) return 0;
-      const romanValues: Record<string, number> = {
-        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
-        'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
-      };
-      return romanValues[roman] || 0;
-    };
+    // With just a single meta level, we don't need to sort or find the next level
+    const metaLevel = metric.metaLevels[0];
+    if (!metaLevel) return `${Math.abs(metric.restante || 0).toFixed(2)}% da meta`;
     
-    // Create a shallow copy to avoid modifying the original array
-    const metasArray = Array.isArray(metric.metaLevels) ? [...metric.metaLevels] : [];
-    if (metasArray.length === 0) return `${Math.abs(metric.restante || 0).toFixed(2)}% da meta`;
-    
-    // Sort by Roman numeral order
-    const sortedMetas = metasArray.sort((a, b) => {
-      const nivelA = romanToInt(a.nivel);
-      const nivelB = romanToInt(b.nivel);
-      return nivelA - nivelB;
-    });
-
-    // Find first meta that's not completed
-    const nextMeta = sortedMetas.find(m => m && m.progress < 100);
-    
-    if (nextMeta) {
-      // For uncompleted metas, show difference between actual and target
-      const difference = Math.abs(metric.atual - nextMeta.valor).toFixed(2);
-      const isGood = metric.atual <= nextMeta.valor;
-      const metaPrefix = nextMeta.nivel ? `Meta ${nextMeta.nivel}` : "próxima meta";
-      return `${difference}% ${isGood ? "abaixo" : "acima"} da ${metaPrefix}`;
-    } else if (sortedMetas.length > 0) {
-      // All metas completed - compare with best meta (the last one for reversed metrics)
-      const bestMeta = sortedMetas[sortedMetas.length - 1];
-      const difference = Math.abs(metric.atual - bestMeta.valor).toFixed(2);
-      const isGood = metric.atual <= bestMeta.valor;
-      return `${difference}% ${isGood ? "abaixo" : "acima"} da meta ${bestMeta.nivel}`;
-    } else {
-      // Fallback case
-      return `${Math.abs(metric.restante || 0).toFixed(2)}% da meta`;
-    }
+    // For uncompleted metas, show difference between actual and target
+    const difference = Math.abs(metric.atual - metaLevel.valor).toFixed(2);
+    const isGood = metric.atual <= metaLevel.valor;
+    return `${difference}% ${isGood ? "abaixo" : "acima"} da meta`;
   };
 
   return (
