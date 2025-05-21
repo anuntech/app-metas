@@ -12,6 +12,7 @@ export type Meta = {
   funcionarios: number;
   despesa: number;
   inadimplencia: number;
+  quantidadeContratos: number;
   nivel: string;
   createdAt?: string;
   updatedAt?: string;

@@ -38,6 +38,16 @@ type ApiProgressResponse = {
       valorReais: number;
       metaLevels: MetaLevel[];
     };
+    quantidadeContratos: {
+      atual: number;
+      overallProgress: number;
+      metaLevels: MetaLevel[];
+    };
+    ticketMedio: {
+      atual: number;
+      overallProgress: number;
+      metaLevels: MetaLevel[];
+    };
     totalFuncionarios: number;
   };
   units: Array<{
@@ -57,6 +67,16 @@ type ApiProgressResponse = {
       atual: number;
       overallProgress: number;
       valorReais: number;
+      metaLevels: MetaLevel[];
+    };
+    quantidadeContratos: {
+      atual: number;
+      overallProgress: number;
+      metaLevels: MetaLevel[];
+    };
+    ticketMedio: {
+      atual: number;
+      overallProgress: number;
       metaLevels: MetaLevel[];
     };
   }>;
@@ -104,6 +124,22 @@ type SummaryData = {
     nivel?: string
     metaLevels?: MetaLevel[]
   }
+  quantidadeContratos: {
+    atual: number
+    meta: number
+    restante: number
+    progresso: number
+    nivel?: string
+    metaLevels?: MetaLevel[]
+  }
+  ticketMedio: {
+    atual: number
+    meta: number
+    restante: number
+    progresso: number
+    nivel?: string
+    metaLevels?: MetaLevel[]
+  }
   totalFuncionarios: number
 }
 
@@ -131,6 +167,20 @@ type UnitData = {
     progresso: number
     valorReais: number
     isNegative: boolean
+    nivel?: string
+    metaLevels?: MetaLevel[]
+  }
+  quantidadeContratos: {
+    atual: number
+    meta: number
+    progresso: number
+    nivel?: string
+    metaLevels?: MetaLevel[]
+  }
+  ticketMedio: {
+    atual: number
+    meta: number
+    progresso: number
     nivel?: string
     metaLevels?: MetaLevel[]
   }
@@ -351,6 +401,20 @@ export default function PainelResultados() {
           valorReais: 0,
           metaLevels: []
         },
+        quantidadeContratos: {
+          atual: 0,
+          meta: 0,
+          restante: 0,
+          progresso: 0,
+          metaLevels: []
+        },
+        ticketMedio: {
+          atual: 0,
+          meta: 0,
+          restante: 0,
+          progresso: 0,
+          metaLevels: []
+        },
         totalFuncionarios: 0
       };
     }
@@ -382,6 +446,24 @@ export default function PainelResultados() {
       return getDefaultMetaValue(metric.atual);
     };
     
+    const quantidadeContratos = progressSummary.quantidadeContratos || defaultMetrics;
+    const ticketMedio = progressSummary.ticketMedio || defaultMetrics;
+
+    // Calculate ticket médio if we have faturamento and quantidadeContratos
+    const ticketMedioAtual = progressSummary.faturamento?.atual && progressSummary.quantidadeContratos?.atual
+      ? progressSummary.faturamento.atual / progressSummary.quantidadeContratos.atual
+      : 0;
+
+    // Calculate ticket médio meta if we have metas for both
+    const ticketMedioMeta = progressSummary.faturamento?.metaLevels?.[0]?.valor && progressSummary.quantidadeContratos?.metaLevels?.[0]?.valor
+      ? progressSummary.faturamento.metaLevels[0].valor / progressSummary.quantidadeContratos.metaLevels[0].valor
+      : 0;
+
+    // Calculate progress for ticket médio
+    const ticketMedioProgress = ticketMedioMeta > 0
+      ? (ticketMedioAtual / ticketMedioMeta) * 100
+      : 0;
+
     return {
       faturamento: {
         atual: faturamento.atual,
@@ -413,6 +495,24 @@ export default function PainelResultados() {
         valorReais: inadimplencia.valorReais || 0,
         metaLevels: inadimplencia.metaLevels || []
       },
+      quantidadeContratos: {
+        atual: quantidadeContratos.atual,
+        meta: getMetaValue(quantidadeContratos),
+        restante: Math.max(0, getMetaValue(quantidadeContratos) - quantidadeContratos.atual),
+        progresso: quantidadeContratos.overallProgress,
+        metaLevels: quantidadeContratos.metaLevels || []
+      },
+      ticketMedio: {
+        atual: ticketMedioAtual,
+        meta: ticketMedioMeta,
+        restante: Math.max(0, ticketMedioMeta - ticketMedioAtual),
+        progresso: ticketMedioProgress,
+        metaLevels: [{
+          nivel: 'I',
+          valor: ticketMedioMeta,
+          progress: ticketMedioProgress
+        }]
+      },
       totalFuncionarios: progressSummary.totalFuncionarios || 0
     };
   };
@@ -433,59 +533,58 @@ export default function PainelResultados() {
     };
     
     return units.map(unit => {
-      // Ensure unit and all required properties exist
-      if (!unit || !unit.faturamento || !unit.despesa || !unit.inadimplencia) {
-        console.error('Invalid unit data format:', unit);
-        return {
-          nome: unit?.nome || 'Unidade desconhecida',
-          faturamento: {
-            atual: 0,
-            meta: 0,
-            progresso: 0,
-            metaLevels: []
-          },
-          despesa: {
-            atual: 0,
-            meta: 0,
-            progresso: 0,
-            valorReais: 0,
-            isNegative: true,
-            metaLevels: []
-          },
-          inadimplencia: {
-            atual: 0,
-            meta: 0,
-            progresso: 0,
-            valorReais: 0,
-            isNegative: true,
-            metaLevels: []
-          }
-        };
-      }
-      
+      // Calculate ticket médio for each unit
+      const ticketMedioAtual = unit.faturamento?.atual && unit.quantidadeContratos?.atual
+        ? unit.faturamento.atual / unit.quantidadeContratos.atual
+        : 0;
+
+      const ticketMedioMeta = unit.faturamento?.metaLevels?.[0]?.valor && unit.quantidadeContratos?.metaLevels?.[0]?.valor
+        ? unit.faturamento.metaLevels[0].valor / unit.quantidadeContratos.metaLevels[0].valor
+        : 0;
+
+      const ticketMedioProgress = ticketMedioMeta > 0
+        ? (ticketMedioAtual / ticketMedioMeta) * 100
+        : 0;
+
       return {
         nome: unit.nome,
         faturamento: {
-          atual: unit.faturamento.atual,
-          meta: getMetaValue(unit.faturamento),
-          progresso: unit.faturamento.overallProgress,
-          metaLevels: unit.faturamento.metaLevels || []
+          atual: unit.faturamento?.atual || 0,
+          meta: getMetaValue(unit.faturamento || { atual: 0 }),
+          progresso: unit.faturamento?.overallProgress || 0,
+          metaLevels: unit.faturamento?.metaLevels || []
         },
         despesa: {
-          atual: unit.despesa.atual,
-          meta: getMetaValue(unit.despesa),
-          progresso: unit.despesa.overallProgress,
-          valorReais: unit.despesa.valorReais,
+          atual: unit.despesa?.atual || 0,
+          meta: getMetaValue(unit.despesa || { atual: 0 }),
+          progresso: unit.despesa?.overallProgress || 0,
+          valorReais: unit.despesa?.valorReais || 0,
           isNegative: true,
-          metaLevels: unit.despesa.metaLevels || []
+          metaLevels: unit.despesa?.metaLevels || []
         },
         inadimplencia: {
-          atual: unit.inadimplencia.atual,
-          meta: getMetaValue(unit.inadimplencia),
-          progresso: unit.inadimplencia.overallProgress,
-          valorReais: unit.inadimplencia.valorReais,
+          atual: unit.inadimplencia?.atual || 0,
+          meta: getMetaValue(unit.inadimplencia || { atual: 0 }),
+          progresso: unit.inadimplencia?.overallProgress || 0,
+          valorReais: unit.inadimplencia?.valorReais || 0,
           isNegative: true,
-          metaLevels: unit.inadimplencia.metaLevels || []
+          metaLevels: unit.inadimplencia?.metaLevels || []
+        },
+        quantidadeContratos: {
+          atual: unit.quantidadeContratos?.atual || 0,
+          meta: getMetaValue(unit.quantidadeContratos || { atual: 0 }),
+          progresso: unit.quantidadeContratos?.overallProgress || 0,
+          metaLevels: unit.quantidadeContratos?.metaLevels || []
+        },
+        ticketMedio: {
+          atual: ticketMedioAtual,
+          meta: ticketMedioMeta,
+          progresso: ticketMedioProgress,
+          metaLevels: [{
+            nivel: 'I',
+            valor: ticketMedioMeta,
+            progress: ticketMedioProgress
+          }]
         }
       };
     });
@@ -659,7 +758,6 @@ export default function PainelResultados() {
                 progress={summaryData.despesa.progresso}
                 overallProgress={summaryData.despesa.progresso}
                 remaining={getReversedRemainingText(summaryData.despesa)}
-                // secondaryText={formatCurrency(summaryData.despesa.valorReais)}
                 isNegative={true}
                 metaLevels={summaryData.despesa.metaLevels}
               />
@@ -672,9 +770,32 @@ export default function PainelResultados() {
                 progress={summaryData.inadimplencia.progresso}
                 overallProgress={summaryData.inadimplencia.progresso}
                 remaining={getReversedRemainingText(summaryData.inadimplencia)}
-                // secondaryText={formatCurrency(summaryData.inadimplencia.valorReais)}
                 isNegative={true}
                 metaLevels={summaryData.inadimplencia.metaLevels}
+              />
+
+              {/* Quantidade de Contratos Card */}
+              <ProgressCard
+                title="Quantidade de contratos"
+                value={summaryData.quantidadeContratos.atual.toLocaleString('pt-BR')}
+                target={summaryData.quantidadeContratos.meta.toLocaleString('pt-BR')}
+                progress={summaryData.quantidadeContratos.progresso}
+                overallProgress={summaryData.quantidadeContratos.progresso}
+                remaining={getRemainingText(summaryData.quantidadeContratos)}
+                isNegative={false}
+                metaLevels={summaryData.quantidadeContratos.metaLevels}
+              />
+
+              {/* Ticket Médio Card */}
+              <ProgressCard
+                title="Ticket médio"
+                value={formatCurrency(summaryData.ticketMedio.atual)}
+                target={formatCurrency(summaryData.ticketMedio.meta)}
+                progress={summaryData.ticketMedio.progresso}
+                overallProgress={summaryData.ticketMedio.progresso}
+                remaining={getRemainingText(summaryData.ticketMedio)}
+                isNegative={false}
+                metaLevels={summaryData.ticketMedio.metaLevels}
               />
             </div>
           ) : (
@@ -727,36 +848,52 @@ export default function PainelResultados() {
           ) : unitsData.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {unitsData.map((unidade, index) => (
-                    <UnitCard
-                      key={`${unidade.nome}-${index}`}
+                <UnitCard
+                  key={`${unidade.nome}-${index}`}
                   name={unidade.nome}
-                      faturamento={{
-                        atual: formatCurrency(unidade.faturamento.atual),
-                        meta: formatCurrency(unidade.faturamento.meta),
-                        progresso: unidade.faturamento.progresso,
+                  faturamento={{
+                    atual: formatCurrency(unidade.faturamento.atual),
+                    meta: formatCurrency(unidade.faturamento.meta),
+                    progresso: unidade.faturamento.progresso,
                     isNegative: false,
                     metaLevels: unidade.faturamento.metaLevels,
                     overallProgress: unidade.faturamento.progresso
-                      }}
-                      despesa={{
-                        atual: `${unidade.despesa.atual.toFixed(2)}%`,
-                        meta: `${unidade.despesa.meta.toFixed(2)}%`,
-                        progresso: unidade.despesa.progresso,
-                        valorReais: formatCurrency(unidade.despesa.valorReais),
+                  }}
+                  despesa={{
+                    atual: `${unidade.despesa.atual.toFixed(2)}%`,
+                    meta: `${unidade.despesa.meta.toFixed(2)}%`,
+                    progresso: unidade.despesa.progresso,
+                    valorReais: formatCurrency(unidade.despesa.valorReais),
                     isNegative: true,
                     metaLevels: unidade.despesa.metaLevels,
                     overallProgress: unidade.despesa.progresso
-                      }}
-                      inadimplencia={{
-                        atual: `${unidade.inadimplencia.atual.toFixed(2)}%`,
-                        meta: `${unidade.inadimplencia.meta.toFixed(2)}%`,
-                        progresso: unidade.inadimplencia.progresso,
-                        valorReais: formatCurrency(unidade.inadimplencia.valorReais),
+                  }}
+                  inadimplencia={{
+                    atual: `${unidade.inadimplencia.atual.toFixed(2)}%`,
+                    meta: `${unidade.inadimplencia.meta.toFixed(2)}%`,
+                    progresso: unidade.inadimplencia.progresso,
+                    valorReais: formatCurrency(unidade.inadimplencia.valorReais),
                     isNegative: true,
                     metaLevels: unidade.inadimplencia.metaLevels,
                     overallProgress: unidade.inadimplencia.progresso
-                      }}
-                    />
+                  }}
+                  quantidadeContratos={{
+                    atual: unidade.quantidadeContratos.atual.toLocaleString('pt-BR'),
+                    meta: unidade.quantidadeContratos.meta.toLocaleString('pt-BR'),
+                    progresso: unidade.quantidadeContratos.progresso,
+                    isNegative: false,
+                    metaLevels: unidade.quantidadeContratos.metaLevels,
+                    overallProgress: unidade.quantidadeContratos.progresso
+                  }}
+                  ticketMedio={{
+                    atual: formatCurrency(unidade.ticketMedio.atual),
+                    meta: formatCurrency(unidade.ticketMedio.meta),
+                    progresso: unidade.ticketMedio.progresso,
+                    isNegative: false,
+                    metaLevels: unidade.ticketMedio.metaLevels,
+                    overallProgress: unidade.ticketMedio.progresso
+                  }}
+                />
               ))}
             </div>
           ) : (

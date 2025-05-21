@@ -77,6 +77,38 @@ export default function DefinicaoMetas() {
     }
   }
 
+  // Function to sort metas by newest first
+  const sortMetasByNewest = (metasToSort: Meta[]) => {
+    // Month name to number mapping for proper sorting
+    const monthOrder: Record<string, number> = {
+      "Janeiro": 1,
+      "Fevereiro": 2,
+      "Março": 3,
+      "Abril": 4,
+      "Maio": 5,
+      "Junho": 6,
+      "Julho": 7,
+      "Agosto": 8,
+      "Setembro": 9,
+      "Outubro": 10,
+      "Novembro": 11,
+      "Dezembro": 12
+    };
+
+    return [...metasToSort].sort((a, b) => {
+      // First sort by year (descending)
+      if (a.ano !== b.ano) {
+        return b.ano - a.ano;
+      }
+      
+      // Then sort by month (descending)
+      return monthOrder[b.mes] - monthOrder[a.mes];
+    });
+  };
+
+  // Sort metas before rendering
+  const sortedMetas = sortMetasByNewest(metas);
+
   return (
     <div className="mt-10">
       <div className="container mx-auto space-y-6 px-4 sm:px-6">
@@ -117,9 +149,9 @@ export default function DefinicaoMetas() {
                 <TableHead>Unidade</TableHead>
                 <TableHead>Faturamento</TableHead>
                 <TableHead>Funcionários</TableHead>
+                <TableHead>Contratos</TableHead>
                 <TableHead>Despesa</TableHead>
                 <TableHead>Inadimplência</TableHead>
-                <TableHead>Nível</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -143,13 +175,13 @@ export default function DefinicaoMetas() {
                         <div className="h-4 w-12 bg-gray-200 rounded"></div>
                       </TableCell>
                       <TableCell>
-                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                        <div className="h-4 w-12 bg-gray-200 rounded"></div>
                       </TableCell>
                       <TableCell>
                         <div className="h-4 w-16 bg-gray-200 rounded"></div>
                       </TableCell>
                       <TableCell>
-                        <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
@@ -159,8 +191,8 @@ export default function DefinicaoMetas() {
                       </TableCell>
                     </TableRow>
                   ))
-              ) : metas.length > 0 ? (
-                metas.map((meta) => (
+              ) : sortedMetas.length > 0 ? (
+                sortedMetas.map((meta) => (
                   <TableRow key={meta._id} className={`transition-all duration-300 ease-in-out ${
                     selectedMetaId === meta._id && isDeleting ? "opacity-50 bg-red-50" : ""
                   }`}>
@@ -168,9 +200,9 @@ export default function DefinicaoMetas() {
                     <TableCell>{meta.unidade}</TableCell>
                     <TableCell>{formatCurrency(meta.faturamento)}</TableCell>
                     <TableCell>{meta.funcionarios}</TableCell>
+                    <TableCell>{meta.quantidadeContratos || 0}</TableCell>
                     <TableCell>{formatPercentage(meta.despesa)}</TableCell>
                     <TableCell>{formatPercentage(meta.inadimplencia)}</TableCell>
-                    <TableCell>{meta.nivel}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
@@ -200,7 +232,7 @@ export default function DefinicaoMetas() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                     Nenhuma meta encontrada para o ano selecionado
                   </TableCell>
                 </TableRow>

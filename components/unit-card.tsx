@@ -26,6 +26,8 @@ type UnitCardProps = {
   faturamento: MetricProps;
   despesa: MetricProps;
   inadimplencia: MetricProps;
+  quantidadeContratos: MetricProps;
+  ticketMedio: MetricProps;
 }
 
 export function UnitCard({
@@ -33,7 +35,9 @@ export function UnitCard({
   isLoading = false,
   faturamento,
   despesa,
-  inadimplencia
+  inadimplencia,
+  quantidadeContratos,
+  ticketMedio
 }: UnitCardProps) {
   // Function to render each metric with single or multi-level progress
   const renderMetric = (
@@ -151,6 +155,8 @@ export function UnitCard({
         {renderMetric("Faturamento", faturamento)}
         {renderMetric("Despesa", despesa)}
         {renderMetric("Inadimplência", inadimplencia)}
+        {renderMetric("Quantidade de contratos", quantidadeContratos)}
+        {renderMetric("Ticket médio", ticketMedio)}
       </CardContent>
     </Card>
   );

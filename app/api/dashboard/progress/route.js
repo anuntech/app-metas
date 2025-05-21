@@ -123,6 +123,7 @@ export async function GET(request) {
         const totalFaturamento = unitApontamentos.reduce((sum, apt) => sum + apt.faturamento, 0);
         const totalRecebimento = unitApontamentos.reduce((sum, apt) => sum + apt.recebimento, 0);
         const totalDespesa = unitApontamentos.reduce((sum, apt) => sum + apt.despesa, 0);
+        const totalQuantidadeContratos = unitApontamentos.reduce((sum, apt) => sum + (apt.quantidadeContratos || 0), 0);
         
         // Calculate inadimplência percentual (faturamento - recebimento) / faturamento * 100
         const inadimplenciaPercentual = totalFaturamento === 0 
@@ -139,6 +140,7 @@ export async function GET(request) {
           despesa: totalDespesa,
           inadimplenciaPercentual: inadimplenciaPercentual,
           inadimplenciaValor: totalFaturamento - totalRecebimento,
+          quantidadeContratos: totalQuantidadeContratos,
           dataInicio: sampleApontamento.dataInicio,
           dataFim: sampleApontamento.dataFim,
           mes: sampleApontamento.mes,
@@ -156,21 +158,13 @@ export async function GET(request) {
       // Get the most recent apontamento for this unit
       const apontamento = latestApontamentosByUnit.get(unit);
       
-      console.log(`Getting actual performance for unit '${unit}':`, apontamento ? {
-        found: true,
-        isCalculated: apontamento.isCalculated || false,
-        faturamento: apontamento.faturamento, 
-        recebimento: apontamento.recebimento,
-        despesa: apontamento.despesa,
-        inadimplenciaPercentual: apontamento.inadimplenciaPercentual
-      } : 'No apontamento found');
-      
       // If no apontamento found, return default values
       if (!apontamento) {
         return {
           faturamento: { atual: 0, valorReais: 0 },
           despesa: { atual: 0, valorReais: 0 },
-          inadimplencia: { atual: 0, valorReais: 0 }
+          inadimplencia: { atual: 0, valorReais: 0 },
+          quantidadeContratos: { atual: 0 }
         };
       }
       
@@ -194,8 +188,10 @@ export async function GET(request) {
         },
         inadimplencia: {
           atual: inadimplenciaPercent,
-          // Calculate valorReais based on percentage if not provided
           valorReais: apontamento.inadimplenciaValor || (apontamento.faturamento * inadimplenciaPercent / 100)
+        },
+        quantidadeContratos: {
+          atual: apontamento.quantidadeContratos || 0
         }
       };
     };
@@ -228,6 +224,12 @@ export async function GET(request) {
           ? (totalApontamento.despesa / totalApontamento.faturamento) * 100 
           : 0;
         
+        // Calculate ticket médio
+        const quantidadeContratos = totalApontamento.quantidadeContratos || 0;
+        const ticketMedio = quantidadeContratos > 0 
+          ? totalApontamento.faturamento / quantidadeContratos
+          : 0;
+        
         progressData.summary = {
           nome: 'Total',
           faturamento: {
@@ -253,14 +255,18 @@ export async function GET(request) {
             metaLevels: [],
             overallProgress: 0
           },
+          quantidadeContratos: {
+            atual: quantidadeContratos,
+            metaLevels: [],
+            overallProgress: 0
+          },
+          ticketMedio: {
+            atual: ticketMedio,
+            metaLevels: [],
+            overallProgress: 0
+          },
           totalFuncionarios: 0
         };
-        
-        console.log('Created simple summary for Total (no metas):', {
-          faturamento: progressData.summary.faturamento.atual,
-          despesa: progressData.summary.despesa.atual,
-          inadimplencia: progressData.summary.inadimplencia.atual
-        });
       }
     } else {
       console.log('No Total apontamento found');
@@ -360,7 +366,7 @@ function calculateProgressForUnit(unitName, metaList, actualData, totalFuncionar
     return {
       ...meta,
       faturamentoPorFuncionario: faturamentoPorFunc,
-      nivel: meta.nivel // Explicitly copy nivel to ensure it's defined
+      nivel: meta.nivel
     };
   });
   
@@ -380,8 +386,38 @@ function calculateProgressForUnit(unitName, metaList, actualData, totalFuncionar
   // Calculate inadimplencia progress (lower is better)
   const inadimplenciaActual = actualData.inadimplencia.atual;
   const inadimplenciaProgress = calculateMetricProgress(inadimplenciaActual, metaList, 'inadimplencia', true);
+
+  // Calculate quantidadeContratos progress
+  const quantidadeContratosActual = actualData.quantidadeContratos?.atual || 0;
+  const quantidadeContratosProgress = calculateMetricProgress(
+    quantidadeContratosActual,
+    metaList,
+    'quantidadeContratos',
+    false
+  );
+
+  // Calculate ticket médio
+  const ticketMedioActual = quantidadeContratosActual > 0 ? faturamentoActual / quantidadeContratosActual : 0;
   
-  return {
+  // Create meta levels for ticket médio based on faturamento and quantidadeContratos metas
+  const ticketMedioMetas = metaList.map(meta => {
+    const ticketMedio = meta.quantidadeContratos > 0 ? meta.faturamento / meta.quantidadeContratos : 0;
+    return {
+      ...meta,
+      ticketMedio,
+      nivel: meta.nivel
+    };
+  });
+
+  // Calculate ticket médio progress
+  const ticketMedioProgress = calculateMetricProgress(
+    ticketMedioActual,
+    ticketMedioMetas,
+    'ticketMedio',
+    false
+  );
+  
+  const result = {
     nome: unitName,
     faturamento: {
       atual: faturamentoActual,
@@ -402,8 +438,18 @@ function calculateProgressForUnit(unitName, metaList, actualData, totalFuncionar
       valorReais: actualData.inadimplencia.valorReais,
       ...inadimplenciaProgress
     },
+    quantidadeContratos: {
+      atual: quantidadeContratosActual,
+      ...quantidadeContratosProgress
+    },
+    ticketMedio: {
+      atual: ticketMedioActual,
+      ...ticketMedioProgress
+    },
     totalFuncionarios
   };
+
+  return result;
 }
 
 /**

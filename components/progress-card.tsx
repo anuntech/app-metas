@@ -58,7 +58,7 @@ export function ProgressCard({
       // Check if the sample is a percentage
       if (sample.includes('%')) {
         return `${value.toFixed(2)}%`;
-      }
+    }
       // Otherwise assume it's currency or a plain number
       return sample.replace(/[\d,.]+/, value.toLocaleString('pt-BR'));
     };

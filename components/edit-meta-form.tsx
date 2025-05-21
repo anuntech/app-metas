@@ -21,6 +21,7 @@ type MetaFormData = {
   funcionarios: string;
   despesa: string;
   inadimplencia: string;
+  quantidadeContratos: string;
 };
 
 type EditMetaFormProps = {
@@ -61,7 +62,8 @@ export function EditMetaForm({ meta, onClose }: EditMetaFormProps) {
     faturamento: formatCurrencyInput(meta.faturamento.toString()),
     funcionarios: meta.funcionarios.toString(),
     despesa: formatPercentageInput(meta.despesa.toString()),
-    inadimplencia: formatPercentageInput(meta.inadimplencia.toString())
+    inadimplencia: formatPercentageInput(meta.inadimplencia.toString()),
+    quantidadeContratos: meta.quantidadeContratos?.toString() || '0'
   });
 
   // Format currency as user types (BRL)
@@ -147,7 +149,8 @@ export function EditMetaForm({ meta, onClose }: EditMetaFormProps) {
         faturamento: Number(formData.faturamento.replace(/\./g, '').replace(',', '.')) || 0,
         funcionarios: Number(formData.funcionarios) || 0,
         despesa: Number(formData.despesa.replace(/%/g, '').replace(',', '.')) || 0,
-        inadimplencia: Number(formData.inadimplencia.replace(/%/g, '').replace(',', '.')) || 0
+        inadimplencia: Number(formData.inadimplencia.replace(/%/g, '').replace(',', '.')) || 0,
+        quantidadeContratos: Number(formData.quantidadeContratos) || 0
       };
 
       // Use the context method to update the meta
@@ -249,6 +252,19 @@ export function EditMetaForm({ meta, onClose }: EditMetaFormProps) {
           className="text-sm" 
           value={formData.funcionarios}
           onChange={(e) => handleChange('funcionarios', e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="quantidadeContratos">Quantidade de contratos</Label>
+        <Input 
+          id="quantidadeContratos" 
+          type="number" 
+          min="0" 
+          placeholder="0" 
+          className="text-sm" 
+          value={formData.quantidadeContratos}
+          onChange={(e) => handleChange('quantidadeContratos', e.target.value)}
         />
       </div>
 

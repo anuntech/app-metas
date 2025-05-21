@@ -27,6 +27,7 @@ type ApontamentoFormData = {
   despesa: string;
   inadimplenciaPercentual: string;
   inadimplenciaValor: string;
+  quantidadeContratos: string;
 };
 
 export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
@@ -54,6 +55,7 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
     despesa: '',
     inadimplenciaPercentual: '',
     inadimplenciaValor: '',
+    quantidadeContratos: ''
   });
 
   // Format currency as user types (BRL)
@@ -166,6 +168,7 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
         despesa: Number(formData.despesa.replace(/\./g, '').replace(',', '.')) || 0,
         inadimplenciaPercentual: Number(formData.inadimplenciaPercentual.replace(/%/g, '').replace(',', '.')) || 0,
         inadimplenciaValor: Number(formData.inadimplenciaValor.replace(/\./g, '').replace(',', '.')) || 0,
+        quantidadeContratos: Number(formData.quantidadeContratos) || 0,
         // Add required fields for the API
         mes: monthName,
         ano: year,
@@ -262,6 +265,19 @@ export function AddApontamentoForm({ onClose }: { onClose: () => void }) {
           className="text-sm"
           value={formData.recebimento}
           onChange={(e) => handleChange('recebimento', e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="quantidadeContratos">Quantidade de contratos</Label>
+        <Input 
+          id="quantidadeContratos" 
+          type="number" 
+          min="0" 
+          placeholder="0" 
+          className="text-sm" 
+          value={formData.quantidadeContratos}
+          onChange={(e) => handleChange('quantidadeContratos', e.target.value)}
         />
       </div>
 

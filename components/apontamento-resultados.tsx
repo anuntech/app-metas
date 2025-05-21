@@ -130,6 +130,7 @@ export default function ApontamentoResultados() {
                 <TableHead>Faturamento</TableHead>
                 <TableHead>Recebimento</TableHead>
                 <TableHead>Despesa</TableHead>
+                <TableHead>Contratos</TableHead>
                 <TableHead>Inadimplência</TableHead>
                 <TableHead>Inadimplência (R$)</TableHead>
                 <TableHead>Ações</TableHead>
@@ -153,6 +154,9 @@ export default function ApontamentoResultados() {
                       </TableCell>
                       <TableCell>
                         <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
                       </TableCell>
                       <TableCell>
                         <div className="h-4 w-16 bg-gray-200 rounded"></div>
@@ -191,6 +195,7 @@ export default function ApontamentoResultados() {
                     <TableCell>{formatCurrency(apontamento.faturamento)}</TableCell>
                     <TableCell>{formatCurrency(apontamento.recebimento)}</TableCell>
                     <TableCell>{formatCurrency(apontamento.despesa)}</TableCell>
+                    <TableCell>{apontamento.quantidadeContratos || 0}</TableCell>
                     <TableCell>{formatPercentage(apontamento.inadimplenciaPercentual)}</TableCell>
                     <TableCell>{formatCurrency(apontamento.inadimplenciaValor)}</TableCell>
                     <TableCell>

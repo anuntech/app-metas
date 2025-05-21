@@ -26,6 +26,7 @@ type ApontamentoFormData = {
   despesa: string;
   inadimplenciaPercentual: string;
   inadimplenciaValor: string;
+  quantidadeContratos: string;
 };
 
 type EditApontamentoFormProps = {
@@ -61,6 +62,7 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
     despesa: formatCurrencyForInput(apontamento.despesa),
     inadimplenciaPercentual: formatPercentageForInput(apontamento.inadimplenciaPercentual),
     inadimplenciaValor: formatCurrencyForInput(apontamento.inadimplenciaValor),
+    quantidadeContratos: (apontamento.quantidadeContratos || 0).toString()
   });
 
   // Format currency as user types (BRL)
@@ -180,6 +182,7 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
         despesa: Number(formData.despesa.replace(/\./g, '').replace(',', '.')) || 0,
         inadimplenciaPercentual: Number(formData.inadimplenciaPercentual.replace(/%/g, '').replace(',', '.')) || 0,
         inadimplenciaValor: Number(formData.inadimplenciaValor.replace(/\./g, '').replace(',', '.')) || 0,
+        quantidadeContratos: Number(formData.quantidadeContratos) || 0,
         mes: monthName,
         ano: year,
         dataInicio: startDate.toISOString(),
@@ -286,6 +289,19 @@ export function EditApontamentoForm({ apontamento, onClose }: EditApontamentoFor
           className="text-sm"
           value={formData.despesa}
           onChange={(e) => handleChange('despesa', e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="quantidadeContratos">Quantidade de contratos</Label>
+        <Input 
+          id="quantidadeContratos" 
+          type="number" 
+          min="0" 
+          placeholder="0" 
+          className="text-sm" 
+          value={formData.quantidadeContratos}
+          onChange={(e) => handleChange('quantidadeContratos', e.target.value)}
         />
       </div>
 
