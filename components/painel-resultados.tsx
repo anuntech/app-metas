@@ -12,6 +12,8 @@ import 'react-date-range/dist/styles.css'
 import 'react-date-range/dist/theme/default.css'
 import { DateRange } from 'react-date-range'
 import { useToast } from "@/components/custom-toast"
+import { usePDFExport } from "@/hooks/usePDFExport"
+import { PDFIcon } from "@/components/ui/pdf-icon"
 
 // Type definitions for API responses
 type ApiProgressResponse = {
@@ -215,6 +217,9 @@ export default function PainelResultados() {
   
   // Use the toast hook
   const { addToast } = useToast()
+  
+  // Use the PDF export hook
+  const { exportToPDF } = usePDFExport()
 
   // Month names array - keep for reference but mark as unused
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -618,6 +623,37 @@ export default function PainelResultados() {
     setDateRange([ranges.selection])
   }
 
+  // Handle PDF export
+  const handlePDFExport = async () => {
+    const currentDate = new Date().toLocaleDateString('pt-BR');
+    const periodStr = formatPeriod(dateRange[0].startDate, dateRange[0].endDate);
+    const filename = `painel-resultados-${periodStr.replace(/\s+/g, '-').toLowerCase()}-${currentDate.replace(/\//g, '-')}.pdf`;
+    
+    const result = await exportToPDF('painel-resultados-content', {
+      filename,
+      format: 'a4',
+      orientation: 'portrait',
+      quality: 0.95,
+      margins: { top: 3, right: 3, bottom: 3, left: 3 }
+    });
+
+    if (result.success) {
+      addToast({
+        title: "Sucesso!",
+        message: "PDF exportado com sucesso!",
+        type: "success",
+        duration: 3000,
+      });
+    } else {
+      addToast({
+        title: "Erro",
+        message: result.message,
+        type: "error",
+        duration: 5000,
+      });
+    }
+  }
+
   // New function to get remaining text based on the next incomplete meta level
   const getRemainingText = (faturamento: { atual: number; metaLevels?: MetaLevel[] }) => {
     if (!faturamento || !faturamento.metaLevels || faturamento.metaLevels.length === 0) {
@@ -653,7 +689,7 @@ export default function PainelResultados() {
 
   return (
     <div>
-      <div className="container mx-auto space-y-8 px-4 sm:px-6 mt-5">
+      <div id="painel-resultados-content" className="container mx-auto space-y-8 px-4 sm:px-6 mt-5">
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
@@ -672,6 +708,17 @@ export default function PainelResultados() {
             </div>
 
             <div className="flex gap-2">
+              <Button
+                onClick={handlePDFExport}
+                variant="outline"
+                size="sm"
+                className="text-red-600 border-red-600 hover:bg-red-50"
+                disabled={loading || !summaryData}
+              >
+                <PDFIcon className="mr-2 h-4 w-4" />
+                Exportar PDF
+              </Button>
+              
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
