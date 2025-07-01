@@ -1,5 +1,13 @@
 # 🎉 Sistema de PDF Automático - COMPLETO
 
+## 🔧 CORREÇÃO IMPORTANTE (Janeiro 2025)
+
+**❌ Problema Identificado:** `ECONNREFUSED ::1:3000` em produção
+**✅ Solução:** Substituição de requisições HTTP externas por chamadas internas diretas
+**📄 Detalhes:** Ver arquivo `CORRECAO-PRODUCAO.md`
+
+---
+
 ## 📋 O que foi implementado:
 
 ### ✅ Sistema de Geração de PDF

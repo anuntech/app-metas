@@ -141,8 +141,15 @@ async function executeDailyPDFTask() {
     // 1. Generate and save PDF
     console.log('1. Gerando PDF diário...');
     
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/pdf/daily-report`);
+    // Import the daily report route handler directly to avoid HTTP request issues
+    const { GET } = await import('../app/api/pdf/daily-report/route');
+    const { NextRequest } = await import('next/server');
+    
+    // Create a mock NextRequest object
+    const mockRequest = new NextRequest('http://localhost:3000/api/pdf/daily-report');
+    
+    // Call the route handler directly
+    const response = await GET(mockRequest);
     
     if (!response.ok) {
       const errorData = await response.json();

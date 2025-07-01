@@ -84,28 +84,30 @@ type ApiProgressResponse = {
 
 async function fetchDashboardData(startDate: string, endDate: string): Promise<ApiProgressResponse> {
   try {
-    // Get the absolute URL for the API call
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    
-    const queryParams = new URLSearchParams({ 
-      startDate, 
-      endDate
-    });
-    
     console.log(`Fetching progress data for daily PDF:`, {
       startDate,
-      endDate,
-      queryString: queryParams.toString()
+      endDate
     });
+
+    // Import the dashboard progress route handler directly
+    const { GET } = await import('../../dashboard/progress/route.js');
     
-    const progressResponse = await fetch(`${baseUrl}/api/dashboard/progress?${queryParams}`);
+    // Create a mock request object with the query parameters
+    const url = new URL('http://localhost:3000/api/dashboard/progress');
+    url.searchParams.set('startDate', startDate);
+    url.searchParams.set('endDate', endDate);
     
-    if (!progressResponse.ok) {
-      const errorData = await progressResponse.json();
+    const mockRequest = new NextRequest(url.toString());
+    
+    // Call the route handler directly
+    const response = await GET(mockRequest);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
       throw new Error(errorData.message || 'Erro ao carregar dados do progresso');
     }
     
-    const progressData = await progressResponse.json();
+    const progressData = await response.json();
     return progressData;
     
   } catch (error) {
