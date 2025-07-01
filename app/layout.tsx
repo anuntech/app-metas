@@ -4,6 +4,8 @@ import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { MetasProvider } from "@/lib/context/MetasContext"
 import { ToastProvider } from "@/components/custom-toast"
+// Initialize the daily PDF scheduler
+import "@/lib/init-scheduler"
 
 const inter = Inter({ subsets: ["latin"] })
 
