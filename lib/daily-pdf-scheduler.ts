@@ -9,6 +9,34 @@ interface ExternalAPIConfig {
   apiKey?: string;
 }
 
+// Function to check message status
+async function checkMessageStatus(statusUrl: string, authToken: string): Promise<any> {
+  try {
+    // Corrigir URL se for path relativo
+    const fullStatusUrl = statusUrl.startsWith('http') 
+      ? statusUrl 
+      : `https://api.wts.chat${statusUrl}`;
+
+    const response = await fetch(fullStatusUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': authToken,
+        'accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erro ${response.status}: ${errorText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Erro ao verificar status: ${error}`);
+    throw error;
+  }
+}
+
 // Function to send PDF URL to multiple numbers via WTS Chat API
 async function sendPDFToExternalAPI(pdfUrl: string, config: ExternalAPIConfig) {
   try {
@@ -48,9 +76,16 @@ async function sendPDFToExternalAPI(pdfUrl: string, config: ExternalAPIConfig) {
       headers['Authorization'] = config.apiKey;
     }
 
-    // Send to each phone number
-    const results = [];
-    const errors = [];
+      // Send to each phone number
+  const results: Array<{
+    phone: string;
+    success: boolean;
+    response: any;
+  }> = [];
+  const errors: Array<{
+    phone: string;
+    error: string;
+  }> = [];
 
     for (let i = 0; i < phoneList.length; i++) {
       const toPhone = phoneList[i];
@@ -81,6 +116,11 @@ async function sendPDFToExternalAPI(pdfUrl: string, config: ExternalAPIConfig) {
 
         const result = await response.json();
         console.log(`✅ PDF enviado com sucesso para ${toPhone}:`, result);
+        
+        // Corrigir statusUrl se for path relativo
+        if (result.statusUrl && !result.statusUrl.startsWith('http')) {
+          result.statusUrl = `https://api.wts.chat${result.statusUrl}`;
+        }
         
         results.push({
           phone: toPhone,
@@ -116,6 +156,26 @@ async function sendPDFToExternalAPI(pdfUrl: string, config: ExternalAPIConfig) {
     if (results.length > 0) {
       console.log(`\n✅ Números enviados com sucesso:`);
       results.forEach(res => console.log(`  - ${res.phone}`));
+      
+      // Verificar status das mensagens após 30 segundos
+      console.log(`\n⏳ Aguardando 30 segundos antes de verificar status de entrega...`);
+      setTimeout(async () => {
+        console.log(`\n🔍 Verificando status de entrega das mensagens...`);
+        
+        for (const result of results) {
+          if (result.response?.statusUrl && config.authToken) {
+            try {
+              const status = await checkMessageStatus(result.response.statusUrl, config.authToken);
+              const deliveryStatus = status.status === 'DELIVERED' || status.status === 'READ' ? '✅ ENTREGUE' : 
+                                   status.status === 'FAILED' || status.status === 'ERROR' ? '❌ FALHOU' : 
+                                   `⏳ ${status.status}`;
+              console.log(`📱 ${result.phone}: ${deliveryStatus}`);
+            } catch (error) {
+              console.log(`📱 ${result.phone}: ❓ Erro ao verificar status`);
+            }
+          }
+        }
+      }, 30000);
     }
 
     return {
