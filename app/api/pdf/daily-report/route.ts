@@ -82,7 +82,7 @@ type ApiProgressResponse = {
   }>;
 };
 
-async function fetchDashboardData(startDate: string, endDate: string): Promise<ApiProgressResponse> {
+export async function fetchDashboardData(startDate: string, endDate: string): Promise<ApiProgressResponse> {
   try {
     console.log(`Fetching progress data for daily PDF:`, {
       startDate,
@@ -116,7 +116,7 @@ async function fetchDashboardData(startDate: string, endDate: string): Promise<A
   }
 }
 
-function transformSummaryData(progressSummary: ApiProgressResponse["summary"]) {
+export function transformSummaryData(progressSummary: ApiProgressResponse["summary"]) {
   if (!progressSummary) {
     throw new Error('Dados de resumo não encontrados');
   }
@@ -206,7 +206,7 @@ function transformSummaryData(progressSummary: ApiProgressResponse["summary"]) {
   };
 }
 
-function transformUnitsData(units: ApiProgressResponse["units"]) {
+export function transformUnitsData(units: ApiProgressResponse["units"]) {
   if (!units || units.length === 0) return [];
   
   const getMetaValue = (metric: { atual: number, metaLevels?: MetaLevel[] }) => {
@@ -313,8 +313,8 @@ async function generateAndSavePDF(startDate: Date, endDate: Date) {
 
     console.log(`PDF diário salvo em: ${filePath}`);
 
-    // 7. Return public URL
-    const publicUrl = `/pdfs/daily-reports/${filename}`;
+    // 7. Return public URL (usando novo endpoint dinâmico)
+    const publicUrl = `/api/pdf/serve/${filename}`;
     
     return {
       success: true,

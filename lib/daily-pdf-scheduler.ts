@@ -76,7 +76,7 @@ async function sendPDFToExternalAPI(pdfUrl: string, config: ExternalAPIConfig) {
       headers['Authorization'] = config.apiKey;
     }
 
-      // Send to each phone number
+    // Send to each phone number
   const results: Array<{
     phone: string;
     success: boolean;
