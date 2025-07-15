@@ -25,3 +25,33 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# test scripts e arquivos temporários
+scripts/test-*.js
+scripts/advanced-*.js
+scripts/production-test.js
+scripts/*-diagnosis.js
+
+# PDFs temporários
+/public/pdfs/
+*.pdf
+
+# logs de debug
+debug.log
+*.log
+
+# arquivos de teste
+test-*.json
+test-*.txt
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
