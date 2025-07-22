@@ -128,9 +128,9 @@ async function sendPDFToExternalAPI(pdfUrl: string, config: ExternalAPIConfig) {
           response: result
         });
 
-        // Add small delay between requests to avoid rate limiting
+        // Add delay between requests to avoid rate limiting (2 seconds)
         if (i < phoneList.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
       } catch (error) {
