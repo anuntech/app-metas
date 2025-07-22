@@ -53,9 +53,9 @@ async function testWithProductionURL() {
       return;
     }
 
-    const fullPdfUrl = `${productionUrl}${pdfResult.data.publicUrl}`;
+    const fullPdfUrl = `${productionUrl}/api/pdf/serve/${pdfResult.data.filename}`;
     console.log(`✅ PDF gerado: ${pdfResult.data.filename}`);
-    console.log(`🔗 URL pública: ${fullPdfUrl}`);
+    console.log(`🔗 URL pública (endpoint dinâmico): ${fullPdfUrl}`);
 
     // 2. Verificar se a URL é acessível
     console.log('\n🔍 Verificando se o PDF é acessível...');

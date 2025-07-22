@@ -224,11 +224,11 @@ async function executeDailyPDFTask() {
 
     console.log('✅ PDF gerado com sucesso:', pdfResult.data.filename);
 
-    // 2. Prepare full URL for external API
+    // 2. Prepare full URL for external API using the dynamic serve endpoint
     const domain = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const fullPdfUrl = `${domain}${pdfResult.data.publicUrl}`;
+    const fullPdfUrl = `${domain}/api/pdf/serve/${pdfResult.data.filename}`;
     
-    console.log('2. URL do PDF:', fullPdfUrl);
+    console.log('2. URL do PDF (endpoint dinâmico):', fullPdfUrl);
 
     // 3. Send to external API (if configured)
     const externalAPIConfig = getExternalAPIConfig();
