@@ -92,8 +92,9 @@ async function fetchDashboardData(startDate: string, endDate: string): Promise<A
     // Import the dashboard progress route handler directly
     const { GET } = await import('../../dashboard/progress/route.js');
     
-    // Create a mock request object with the query parameters
-    const url = new URL('http://localhost:3000/api/dashboard/progress');
+    // Create a mock request object with the query parameters using production URL
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const url = new URL(`${baseUrl}/api/dashboard/progress`);
     url.searchParams.set('startDate', startDate);
     url.searchParams.set('endDate', endDate);
     

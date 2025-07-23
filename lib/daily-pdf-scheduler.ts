@@ -205,8 +205,9 @@ async function executeDailyPDFTask() {
     const { GET } = await import('../app/api/pdf/daily-report/route');
     const { NextRequest } = await import('next/server');
     
-    // Create a mock NextRequest object
-    const mockRequest = new NextRequest('http://localhost:3000/api/pdf/daily-report');
+    // Create a mock NextRequest object using production URL
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const mockRequest = new NextRequest(`${baseUrl}/api/pdf/daily-report`);
     
     // Call the route handler directly
     const response = await GET(mockRequest);
